@@ -1,47 +1,73 @@
-// Core Types
-export type Rank = 'Firefighter' | 'DE' | 'Lieutenant' | 'Captain' | 'Chief';
-export type Apparatus = 'Rescue 1';
-export type ItemStatus = 'present' | 'missing' | 'damaged';
-export type Shift = 'A' | 'B' | 'C';
-
 // User Interface
 export interface User {
   name: string;
   rank: Rank;
-  apparatus: Apparatus;
-  shift?: Shift;
-  unitNumber?: string;
+  apparatus: string;
+  shift: Shift;
+  unitNumber: string;
+}
+
+export interface CompartmentItem {
+  name: string;
+  inputType?: 'checkbox' | 'text' | 'number' | 'percentage';
+  expectedQuantity?: number;
+  note?: string;
+}
+
+export interface Compartment {
+  id: string;
+  title: string;
+  items: (string | CompartmentItem)[];
 }
 
 // Checklist Item
 export interface ChecklistItem {
-  id: string;
   name: string;
-  compartmentId: string;
   status: ItemStatus;
   notes?: string;
   photoUrl?: string;
-}
-
-// Compartment
-export interface Compartment {
-  id: string;
-  title: string;
-  items: string[];
-}
-
-// Officer Checklist Item
-export interface OfficerChecklistItem {
-  id: string;
-  name: string;
-  checked?: boolean;
-  value?: string;
+  inputType?: 'checkbox' | 'text' | 'number' | 'percentage';
+  expectedQuantity?: number;
+  value?: string | number;
 }
 
 // Daily Schedule Task
 export interface DailyScheduleTask {
   day: string;
   tasks: string[];
+}
+
+// Officer Checklist Item
+export interface OfficerChecklistItem {
+  id: string;
+  name: string;
+  checked: boolean;
+  inputType?: 'checkbox' | 'text' | 'number' | 'percentage';
+  value?: string | number;
+  required?: boolean;
+}
+
+// Complete Checklist Data
+export interface ChecklistData {
+  title: string;
+  compartments: Compartment[];
+  dailySchedule?: DailyScheduleTask[];
+  officerChecklist?: Array<{
+    id: string;
+    name: string;
+    inputType?: 'checkbox' | 'text' | 'number' | 'percentage';
+  }>;
+}
+
+export type Apparatus = 'RESCUE 1' | 'RESCUE 2' | 'RESCUE 3' | 'RESCUE 11' | 'ENGINE 1';
+export type ItemStatus = 'present' | 'missing' | 'damaged';
+export type Rank = 'Firefighter' | 'DE' | 'Lieutenant' | 'Captain' | 'Chief';
+export type Shift = 'A' | 'B' | 'C';
+
+export interface Compartment {
+  id: string;
+  title: string;
+  items: (string | CompartmentItem)[];
 }
 
 // Front Cab Checks
@@ -57,25 +83,18 @@ export interface FrontCabChecks {
 
 // Defect Interface (for admin dashboard) - matches github.ts usage
 export interface Defect {
-  issueNumber: number;
-  apparatus: string; // Use string instead of Apparatus since parsed from existing issues
+  id?: string;
+  apparatus: string;
   compartment: string;
   item: string;
   status: 'missing' | 'damaged';
   notes: string;
   reportedBy: string;
   reportedAt: string;
-  updatedAt: string;
+  photoUrl?: string;
   resolved: boolean;
-}
-
-// Complete Checklist Data
-export interface ChecklistData {
-  title: string;
-  compartments: Compartment[];
-  officerChecklist?: OfficerChecklistItem[];
-  dailySchedule?: DailyScheduleTask[];
-  frontCabChecks?: FrontCabChecks;
+  issueNumber?: number;
+  updatedAt?: string;
 }
 
 // Inspection Submission
@@ -83,8 +102,6 @@ export interface InspectionSubmission {
   user: User;
   apparatus: string;
   date: string;
-  shift?: Shift;
-  unitNumber?: string;
   items: ChecklistItem[];
   defects: Array<{
     compartment: string;
@@ -93,12 +110,9 @@ export interface InspectionSubmission {
     notes: string;
     photoUrl?: string;
   }>;
+  shift: Shift;
+  unitNumber: string;
   officerChecklist?: OfficerChecklistItem[];
-  frontCabChecks?: FrontCabChecks;
-  signatures?: {
-    inspector: string;
-    lieutenant?: string;
-  };
 }
 
 // GitHub Issue
@@ -107,7 +121,7 @@ export interface GitHubIssue {
   title: string;
   body: string;
   state: 'open' | 'closed';
-  labels: string[];
+  labels: Array<{ name: string }>;
   created_at: string;
   updated_at: string;
   user?: {

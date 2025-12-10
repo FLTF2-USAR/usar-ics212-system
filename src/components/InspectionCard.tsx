@@ -3,10 +3,10 @@ import { Check, X, AlertTriangle, Camera, Image as ImageIcon } from 'lucide-reac
 import { cn } from '../lib/utils';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
-import type { ItemStatus } from '../types';
+import type { ItemStatus, CompartmentItem } from '../types';
 
 interface InspectionCardProps {
-  item: string;
+  item: string | CompartmentItem;
   compartmentId: string;
   status: ItemStatus;
   hasExistingDefect: boolean;
@@ -24,6 +24,11 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
   const [notes, setNotes] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Extract item data
+  const itemName = typeof item === 'string' ? item : item.name;
+  const expectedQuantity = typeof item === 'object' ? item.expectedQuantity : undefined;
+  const itemNote = typeof item === 'object' ? item.note : undefined;
 
   const handleStatusClick = (newStatus: ItemStatus) => {
     if (newStatus === 'present') {
@@ -80,7 +85,15 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
       >
         {/* Item Name */}
         <div className="flex-1 min-w-0 pr-3">
-          <p className="font-semibold text-gray-900 text-base leading-tight">{item}</p>
+          <p className="font-semibold text-gray-900 text-base leading-tight">
+            {itemName}
+            {expectedQuantity && (
+              <span className="text-sm text-gray-600 ml-1">({expectedQuantity})</span>
+            )}
+          </p>
+          {itemNote && (
+            <p className="text-xs text-gray-500 mt-1">{itemNote}</p>
+          )}
           {hasExistingDefect && (
             <span className="inline-block mt-2 px-3 py-1 bg-orange-600 text-white text-xs font-bold rounded-full shadow-sm">
               ⚠️ Previously Reported
@@ -138,7 +151,7 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
       <Modal
         isOpen={showNotesModal}
         onClose={handleCancel}
-        title={`Item ${modalType === 'missing' ? 'Missing' : 'Damaged'}: "${item}"`}
+        title={`Item ${modalType === 'missing' ? 'Missing' : 'Damaged'}: "${itemName}"`}
       >
         <div className="space-y-4">
           {/* Issue Type Badge */}

@@ -31,152 +31,168 @@
     }
   ],
   "officerChecklist": [
-    { "id": "lock_box_key", "name": "Lock Box Key" },
-    { "id": "elevator_key", "name": "Elevator Key" },
-    { "id": "mileage_delt", "name": "Mileage Delt" },
-    { "id": "laptop_num", "name": "Laptop #" },
-    { "id": "toughbook_num", "name": "Toughbook #" },
-    { "id": "psi_front", "name": "PSI - Front #" },
-    { "id": "psi_rear", "name": "PSI - Rear #" },
-    { "id": "brake_test", "name": "Brake Test" },
-    { "id": "narcotic_book", "name": "Narcotic Book" },
-    { "id": "narcotic_seal", "name": "Narcotic Seal # M" },
-    { "id": "cylinder_psi", "name": "Cylinder PSI" },
-    { "id": "vehicle_log_book", "name": "Vehicle Log Book" },
-    { "id": "fuel_card", "name": "Fuel Card" },
-    { "id": "hydrant_maps", "name": "Hydrant Maps" }
+    { "id": "engine_oil", "name": "Engine Oil Level", "inputType": "checkbox" },
+    { "id": "transmission_fluid", "name": "Transmission Fluid Level", "inputType": "checkbox" },
+    { "id": "coolant", "name": "Coolant Level", "inputType": "checkbox" },
+    { "id": "fuel_percent", "name": "Fuel %", "inputType": "percentage", "required": true },
+    { "id": "def_percent", "name": "DEF %", "inputType": "percentage", "required": true },
+    { "id": "cad_logged_in", "name": "CAD Logged In", "inputType": "checkbox" },
+    { "id": "lock_box_key", "name": "Lock Box Key", "inputType": "checkbox" },
+    { "id": "elevator_key", "name": "Elevator Key", "inputType": "checkbox" },
+    { "id": "mileage_delt", "name": "Mileage Delt", "inputType": "number", "required": true },
+    { "id": "laptop_num", "name": "Laptop #", "inputType": "text" },
+    { "id": "toughbook_num", "name": "Toughbook #", "inputType": "number" },
+    { "id": "psi_front", "name": "PSI - Front #", "inputType": "number", "required": true },
+    { "id": "psi_rear", "name": "PSI - Rear #", "inputType": "number", "required": true },
+    { "id": "brake_test", "name": "Brake Test", "inputType": "checkbox" },
+    { "id": "narcotic_book", "name": "Narcotic Book", "inputType": "checkbox" },
+    { "id": "narcotic_seal", "name": "Narcotic Seal # M", "inputType": "text", "required": true },
+    { "id": "cylinder_psi", "name": "Cylinder PSI", "inputType": "number" },
+    { "id": "vehicle_log_book", "name": "Vehicle Log Book", "inputType": "checkbox" },
+    { "id": "fuel_card", "name": "Fuel Card", "inputType": "checkbox" },
+    { "id": "hydrant_maps", "name": "Hydrant Maps", "inputType": "checkbox" }
   ],
   "compartments": [
     {
       "id": "cab",
       "title": "Front Cab",
       "items": [
-        "Lights (Check)",
-        "Siren (Check)",
-        "Mobile Radio (Test)",
-        "Air Horn (Check)",
-        "No Smoking Sign"
+        { "name": "Lights (Check)", "inputType": "checkbox" },
+        { "name": "Siren (Check)", "inputType": "checkbox" },
+        { "name": "Mobile Radio (Test)", "inputType": "checkbox" },
+        { "name": "Air Horn (Check)", "inputType": "checkbox" },
+        { "name": "No Smoking Sign", "inputType": "checkbox" }
       ]
     },
     {
       "id": "driver_a",
       "title": "Driver Side - Compartment A",
       "items": [
-        "M Cylinders (2)",
-        "D-Cylinders (4)",
-        "Electric Stair Chair"
+        { "name": "M Cylinders", "inputType": "checkbox", "expectedQuantity": 2 },
+        { "name": "D-Cylinders", "inputType": "checkbox", "expectedQuantity": 4 },
+        { "name": "Electric Stair Chair", "inputType": "checkbox" }
       ]
     },
     {
       "id": "driver_b",
       "title": "Driver Side - Compartment B",
       "items": [
-        "MCI Bag",
-        "Caution Tape",
-        "Road Hazards",
-        "Triangular Markers",
-        "Dry Chem A,B,C Extinguisher (2)",
-        "SCBA Bottle (1)",
-        "Air Chisel",
-        "600' Poly Rescue Rope",
-        "Torpedo Buoy",
-        "Tool Box"
+        { "name": "MCI Bag", "inputType": "checkbox" },
+        { "name": "Caution Tape", "inputType": "checkbox" },
+        { "name": "Road Hazards", "inputType": "checkbox" },
+        { "name": "Triangular Markers", "inputType": "checkbox" },
+        { "name": "Dry Chem A,B,C Extinguisher", "inputType": "checkbox", "expectedQuantity": 2 },
+        { "name": "SCBA Bottle", "inputType": "checkbox", "expectedQuantity": 1 },
+        { "name": "Air Chisel", "inputType": "checkbox" },
+        { "name": "600' Poly Rescue Rope", "inputType": "checkbox" },
+        { "name": "Torpedo Buoy", "inputType": "checkbox" },
+        { "name": "Tool Box", "inputType": "checkbox" }
       ]
     },
     {
       "id": "driver_c",
       "title": "Driver Side - Compartment C",
       "items": [
-        "Spanner Wrench (2)",
-        "Hydrant Wrench",
-        "Bolt Cutters",
-        "Halligan",
-        "Flat Head Axe",
-        "Glass Cutter",
-        "Sledge"
+        { "name": "Spanner Wrench", "inputType": "checkbox", "expectedQuantity": 2 },
+        { "name": "Hydrant Wrench", "inputType": "checkbox" },
+        { "name": "Bolt Cutters", "inputType": "checkbox" },
+        { "name": "Halligan", "inputType": "checkbox" },
+        { "name": "Flat Head Axe", "inputType": "checkbox" },
+        { "name": "Glass Cutter", "inputType": "checkbox" },
+        { "name": "Sledge", "inputType": "checkbox" }
       ]
     },
     {
       "id": "driver_d",
       "title": "Driver Side - Compartment D",
       "items": [
-        "PAR Tags (2)",
-        "SCBAs (3)",
-        "Helmet Shields (3)",
-        "Passports"
+        { "name": "PAR Tags", "inputType": "checkbox", "expectedQuantity": 2 },
+        { "name": "SCBAs", "inputType": "text", "expectedQuantity": 3, "note": "Enter SCBA serial numbers" },
+        { "name": "Helmet Shields", "inputType": "checkbox", "expectedQuantity": 3 },
+        { "name": "Passports", "inputType": "checkbox" }
       ]
     },
     {
       "id": "stretcher",
       "title": "Stretcher",
       "items": [
-        "Airway Bag",
-        "Med Box/Bag"
+        { "name": "Airway Bag", "inputType": "checkbox" },
+        { "name": "Med Box/Bag", "inputType": "checkbox" }
       ]
     },
     {
       "id": "lifepak",
       "title": "LifePak 15",
       "items": [
-        "LifePak 15",
-        "O2 Bottle",
-        "Spare Sheet (1)",
-        "Ferno 4 Point Harness with lap belt"
+        { "name": "LifePak 15", "inputType": "checkbox" },
+        { "name": "O2 Bottle", "inputType": "checkbox" },
+        { "name": "Spare Sheet", "inputType": "checkbox", "expectedQuantity": 1 },
+        { "name": "Ferno 4 Point Harness with lap belt", "inputType": "checkbox" }
       ]
     },
     {
       "id": "officer_a",
       "title": "Officer Side - Compartment A",
       "items": [
-        "OB Kits (2)",
-        "HandTevy Kit",
-        "Pedi Inflatable Splint",
-        "Yellow Blanket (2)",
-        "Ferno Pedi-Mate",
-        "Cooler",
-        "Tyveks (3)"
+        { "name": "OB Kits", "inputType": "checkbox", "expectedQuantity": 2 },
+        { "name": "HandTevy Kit", "inputType": "checkbox" },
+        { "name": "Pedi Inflatable Splint", "inputType": "checkbox" },
+        { "name": "Yellow Blanket", "inputType": "checkbox", "expectedQuantity": 2 },
+        { "name": "Ferno Pedi-Mate", "inputType": "checkbox" },
+        { "name": "Cooler", "inputType": "checkbox" },
+        { "name": "Tyveks", "inputType": "checkbox", "expectedQuantity": 3 }
       ]
     },
     {
       "id": "officer_b",
       "title": "Officer Side - Compartment B (Dive)",
       "items": [
-        "Mask & Snorkel (2)",
-        "Fins (2)",
-        "Gloves (2)",
-        "Dive Light",
-        "Rescue Frisbee"
+        { "name": "Mask & Snorkel", "inputType": "checkbox", "expectedQuantity": 2 },
+        { "name": "Fins", "inputType": "checkbox", "expectedQuantity": 2 },
+        { "name": "Gloves", "inputType": "checkbox", "expectedQuantity": 2 },
+        { "name": "Dive Light", "inputType": "checkbox" },
+        { "name": "Rescue Frisbee", "inputType": "checkbox" }
       ]
     },
     {
       "id": "officer_c",
       "title": "Officer Side - Compartment C",
       "items": [
-        "Vinegar",
-        "Squeegee",
-        "SpeedyCleanz"
+        { "name": "Vinegar", "inputType": "checkbox" },
+        { "name": "Squeegee", "inputType": "checkbox" },
+        { "name": "SpeedyCleanz", "inputType": "checkbox" }
       ]
     },
     {
       "id": "officer_d",
       "title": "Officer Side - Compartment D",
       "items": [
-        "Backboard",
-        "KED",
-        "Traction Splint",
-        "C-Collars (3 Each)",
-        "Head Beds (3)",
-        "Cardboard Splints (5 Long / 5 Short)",
-        "Backboard Straps (6)"
+        { "name": "Backboard", "inputType": "checkbox" },
+        { "name": "KED", "inputType": "checkbox" },
+        { "name": "Traction Splint", "inputType": "checkbox" },
+        { "name": "C-Collars", "inputType": "checkbox", "expectedQuantity": 3 },
+        { "name": "Head Beds", "inputType": "checkbox", "expectedQuantity": 3 },
+        { "name": "Cardboard Splints", "inputType": "checkbox", "note": "5 Long / 5 Short" },
+        { "name": "Backboard Straps", "inputType": "checkbox", "expectedQuantity": 6 }
       ]
     },
     {
       "id": "patient_compartment",
       "title": "Patient Compartment",
       "items": [
-        "No Smoking Sign",
-        "Transport Fee Chart",
-        "Flash Lights (2)"
+        { "name": "No Smoking Sign", "inputType": "checkbox" },
+        { "name": "Transport Fee Chart", "inputType": "checkbox" },
+        { "name": "Flash Lights", "inputType": "checkbox", "expectedQuantity": 2 }
+      ]
+    },
+    {
+      "id": "additional_checks",
+      "title": "Additional Checks",
+      "items": [
+        { "name": "LP CO Monitor Serial #", "inputType": "text", "note": "Enter serial number" },
+        { "name": "Radio #s - LT", "inputType": "checkbox" },
+        { "name": "Radio #s - F1A", "inputType": "checkbox" },
+        { "name": "Radio #s - F1B", "inputType": "checkbox" }
       ]
     }
   ]

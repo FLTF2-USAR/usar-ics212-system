@@ -62,6 +62,11 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
 
+    if (!selectedDefect.issueNumber) {
+      alert('Unable to resolve: Issue number not found');
+      return;
+    }
+
     setIsResolving(true);
     try {
       await githubService.resolveDefect(
@@ -240,7 +245,7 @@ export const AdminDashboard: React.FC = () => {
           ) : (
             <div className="space-y-3">
               {defects.map((defect) => (
-                <Card key={defect.issueNumber} className="hover:shadow-md transition-shadow">
+                <Card key={`${defect.apparatus}-${defect.item}`} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
