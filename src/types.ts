@@ -58,7 +58,7 @@ export interface FrontCabChecks {
 // Defect Interface (for admin dashboard) - matches github.ts usage
 export interface Defect {
   issueNumber: number;
-  apparatus: string;
+  apparatus: string; // Use string instead of Apparatus since parsed from existing issues
   compartment: string;
   item: string;
   status: 'missing' | 'damaged';

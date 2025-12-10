@@ -61,10 +61,15 @@ class GitHubService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch defects: ${response.statusText}`);
+        console.warn(`Failed to fetch defects: ${response.statusText}`);
+        // Return empty map instead of throwing - no existing defects is OK
+        return new Map<string, GitHubIssue>();
       }
 
-      const issues: GitHubIssue[] = await response.json();
+      const data = await response.json();
+      
+      // Handle case where response is not an array (empty response, error, etc.)
+      const issues: GitHubIssue[] = Array.isArray(data) ? data : [];
       const defectMap = new Map<string, GitHubIssue>();
 
       for (const issue of issues) {
@@ -81,7 +86,8 @@ class GitHubService {
       return defectMap;
     } catch (error) {
       console.error('Error fetching existing defects:', error);
-      throw error;
+      // Return empty map instead of throwing - allow inspection to continue
+      return new Map<string, GitHubIssue>();
     }
   }
 
@@ -239,7 +245,7 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
 ${submission.defects.length > 0 ? `
 ### Issues Reported
 ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}`
- : '✅ All items present and working'}
+ : '✅ All items present and working'}}
 
 ---
 *This inspection log was automatically created by the MBFD Checkout System.*
@@ -294,7 +300,10 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
         throw new Error(`Failed to fetch defects: ${response.statusText}`);
       }
 
-      const issues: GitHubIssue[] = await response.json();
+      const data = await response.json();
+      
+      // Handle case where response is not an array
+      const issues: GitHubIssue[] = Array.isArray(data) ? data : [];
       return issues.map(issue => this.parseDefectFromIssue(issue));
     } catch (error) {
       console.error('Error fetching all defects:', error);
