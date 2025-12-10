@@ -59,16 +59,11 @@ export interface ChecklistData {
   }>;
 }
 
-export type Apparatus = 'RESCUE 1' | 'RESCUE 2' | 'RESCUE 3' | 'RESCUE 11' | 'ENGINE 1';
+// Fixed apparatus casing to match UI usage
+export type Apparatus = 'Rescue 1' | 'Rescue 2' | 'Rescue 3' | 'Rescue 11' | 'Engine 1';
 export type ItemStatus = 'present' | 'missing' | 'damaged';
 export type Rank = 'Firefighter' | 'DE' | 'Lieutenant' | 'Captain' | 'Chief';
 export type Shift = 'A' | 'B' | 'C';
-
-export interface Compartment {
-  id: string;
-  title: string;
-  items: (string | CompartmentItem)[];
-}
 
 // Front Cab Checks
 export interface FrontCabChecks {

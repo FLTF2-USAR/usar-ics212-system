@@ -6,9 +6,8 @@ import { Card, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
 import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
+import { APPARATUS_LIST } from '../lib/config';
 import type { Defect } from '../types';
-
-const ADMIN_PASSWORD = 'MBFDsupport!';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -21,36 +20,53 @@ export const AdminDashboard: React.FC = () => {
   const [selectedDefect, setSelectedDefect] = useState<Defect | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [isResolving, setIsResolving] = useState(false);
+  const [showResolveSuccess, setShowResolveSuccess] = useState(false);
 
-  const handlePasswordSubmit = () => {
-    if (passwordInput === ADMIN_PASSWORD) {
-      githubService.setAdminPassword(ADMIN_PASSWORD);
+  const handlePasswordSubmit = async () => {
+    if (!passwordInput.trim()) {
+      setPasswordError('Please enter a password');
+      return;
+    }
+
+    // Set the password and try to load data
+    githubService.setAdminPassword(passwordInput);
+    
+    try {
+      await loadDashboardData();
       setIsAuthenticated(true);
       setPasswordError('');
-      loadDashboardData();
-    } else {
-      setPasswordError('Incorrect password. Please try again.');
+    } catch (err) {
+      console.error('Authentication failed:', err);
+      if (err instanceof Error && err.message.includes('Unauthorized')) {
+        setPasswordError('Incorrect password. Please try again.');
+      } else if (err instanceof Error && err.message.includes('Failed to fetch')) {
+        setPasswordError('Network error. Please check your connection and try again.');
+      } else {
+        setPasswordError('Authentication failed. Please try again.');
+      }
+      githubService.clearAdminPassword();
     }
   };
 
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [status, allDefects] = await Promise.all([
-        githubService.getFleetStatus(),
-        githubService.getAllDefects(),
-      ]);
+      
+      // Fetch all defects (single API call)
+      const allDefects = await githubService.getAllDefects();
+      
+      // Compute fleet status from defects (no additional API call needed)
+      const status = githubService.computeFleetStatus(allDefects);
+      
       setFleetStatus(status);
       setDefects(allDefects);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       if (error instanceof Error && error.message.includes('Unauthorized')) {
-        alert('Authentication failed. Please re-enter the admin password.');
         setIsAuthenticated(false);
         githubService.clearAdminPassword();
-      } else {
-        alert('Error loading dashboard. Please try again.');
       }
+      throw error; // Re-throw to be handled by caller
     } finally {
       setIsLoading(false);
     }
@@ -80,11 +96,14 @@ export const AdminDashboard: React.FC = () => {
       
       setSelectedDefect(null);
       setResolutionNote('');
-      alert('Defect resolved successfully!');
+      
+      // Show success toast
+      setShowResolveSuccess(true);
+      setTimeout(() => setShowResolveSuccess(false), 3000);
     } catch (error) {
       console.error('Error resolving defect:', error);
       if (error instanceof Error && error.message.includes('Unauthorized')) {
-        alert('Authentication failed. Please re-enter the admin password.');
+        alert('Session expired. Please re-enter the admin password.');
         setIsAuthenticated(false);
         githubService.clearAdminPassword();
       } else {
@@ -172,11 +191,19 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  // Only show Rescue 1 - removed other apparatus
-  const apparatusList: string[] = ['Rescue 1'];
+  // Use all apparatus from config
+  const apparatusList: string[] = APPARATUS_LIST;
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Success Toast */}
+      {showResolveSuccess && (
+        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
+          <CheckCircle className="w-5 h-5" />
+          <span className="font-semibold">Defect resolved successfully!</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
@@ -247,9 +274,9 @@ export const AdminDashboard: React.FC = () => {
               {defects.map((defect) => (
                 <Card key={`${defect.apparatus}-${defect.item}`} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
                           <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
                             {defect.apparatus}
                           </span>
@@ -277,7 +304,7 @@ export const AdminDashboard: React.FC = () => {
                         onClick={() => setSelectedDefect(defect)}
                         variant="primary"
                         size="sm"
-                        className="ml-4"
+                        className="mt-3 md:mt-0 md:ml-4"
                       >
                         Resolve
                       </Button>

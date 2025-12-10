@@ -1,4 +1,5 @@
 import type { Defect, GitHubIssue, InspectionSubmission } from '../types';
+import { APPARATUS_LIST, LABELS, DEFECT_TITLE_REGEX } from './config';
 
 // Cloudflare Worker API endpoint
 const API_BASE_URL = 'https://mbfd-github-proxy.pdarleyjr.workers.dev/api';
@@ -53,7 +54,7 @@ class GitHubService {
   async checkExistingDefects(apparatus: string): Promise<Map<string, GitHubIssue>> {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/issues?state=open&labels=Defect,${encodeURIComponent(apparatus)}&per_page=100`,
+        `${API_BASE_URL}/issues?state=open&labels=${LABELS.DEFECT},${encodeURIComponent(apparatus)}&per_page=100`,
         {
           method: 'GET',
           headers: this.getHeaders(),
@@ -73,11 +74,10 @@ class GitHubService {
       const defectMap = new Map<string, GitHubIssue>();
 
       for (const issue of issues) {
-        // Parse the issue title to extract compartment and item
-        // Expected format: "[Apparatus] Compartment: Item - Status"
-        const match = issue.title.match(/\[.+\]\s+(.+):\s+(.+?)\s+-\s+(Missing|Damaged)/);
+        // Parse the issue title using the regex from config
+        const match = issue.title.match(DEFECT_TITLE_REGEX);
         if (match) {
-          const [, compartment, item] = match;
+          const [, , compartment, item] = match;
           const key = `${compartment}:${item}`;
           defectMap.set(key, issue);
         }
@@ -94,6 +94,7 @@ class GitHubService {
   /**
    * Submit a checklist inspection
    * Creates new issues for new defects, adds comments to existing ones
+   * Implements robust error handling: attempts all defects even if some fail
    */
   async submitChecklist(submission: InspectionSubmission): Promise<void> {
     const { user, apparatus, date, defects } = submission;
@@ -101,33 +102,51 @@ class GitHubService {
     // Get existing open defects for this apparatus
     const existingDefects = await this.checkExistingDefects(apparatus);
 
-    // Process each defect
-    for (const defect of defects) {
-      const defectKey = `${defect.compartment}:${defect.item}`;
-      const existingIssue = existingDefects.get(defectKey);
+    // Track failures but continue processing all defects
+    let defectErrors = 0;
+    const errorMessages: string[] = [];
 
-      if (existingIssue) {
-        // Add comment to existing issue
-        await this.addCommentToDefect(
-          existingIssue.number,
-          user.name,
-          user.rank,
-          date,
-          defect.notes
-        );
-      } else {
-        // Create new issue
-        await this.createDefectIssue(
-          apparatus,
-          defect.compartment,
-          defect.item,
-          defect.status,
-          defect.notes,
-          user.name,
-          user.rank,
-          date
-        );
+    // Process each defect (attempt all even if some fail)
+    for (const defect of defects) {
+      try {
+        const defectKey = `${defect.compartment}:${defect.item}`;
+        const existingIssue = existingDefects.get(defectKey);
+
+        if (existingIssue) {
+          // Add comment to existing issue
+          await this.addCommentToDefect(
+            existingIssue.number,
+            user.name,
+            user.rank,
+            date,
+            defect.notes
+          );
+        } else {
+          // Create new issue
+          await this.createDefectIssue(
+            apparatus,
+            defect.compartment,
+            defect.item,
+            defect.status,
+            defect.notes,
+            user.name,
+            user.rank,
+            date
+          );
+        }
+      } catch (error) {
+        defectErrors++;
+        const errorMsg = `${defect.compartment}: ${defect.item}`;
+        errorMessages.push(errorMsg);
+        console.error(`Failed to process defect ${errorMsg}:`, error);
+        // Continue to next defect instead of throwing
       }
+    }
+
+    // If any defects failed, throw error before creating log
+    // This prevents incomplete submissions from being logged
+    if (defectErrors > 0) {
+      throw new Error(`Failed to submit ${defectErrors} defect(s): ${errorMessages.join(', ')}. Please try again.`);
     }
 
     // Create a log entry (closed issue) for the completed inspection
@@ -165,9 +184,9 @@ ${notes}
 *This issue was automatically created by the MBFD Checkout System.*
     `.trim();
 
-    const labels = ['Defect', apparatus];
+    const labels = [LABELS.DEFECT, apparatus];
     if (status === 'damaged') {
-      labels.push('Damaged');
+      labels.push(LABELS.DAMAGED);
     }
 
     try {
@@ -245,7 +264,7 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
 ${submission.defects.length > 0 ? `
 ### Issues Reported
 ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}`
- : '✅ All items present and working'}}
+ : '✅ All items present and working'}
 
 ---
 *This inspection log was automatically created by the MBFD Checkout System.*
@@ -258,7 +277,7 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
         body: JSON.stringify({
           title,
           body,
-          labels: ['Log', apparatus],
+          labels: [LABELS.LOG, apparatus],
         }),
       });
 
@@ -286,7 +305,7 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
   async getAllDefects(): Promise<Defect[]> {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/issues?state=open&labels=Defect&per_page=100`,
+        `${API_BASE_URL}/issues?state=open&labels=${LABELS.DEFECT}&per_page=100`,
         {
           method: 'GET',
           headers: this.getHeaders(true), // Admin request
@@ -315,7 +334,7 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
    * Parse a defect object from a GitHub issue
    */
   private parseDefectFromIssue(issue: GitHubIssue): Defect {
-    const match = issue.title.match(/\[(.+)\]\s+(.+):\s+(.+?)\s+-\s+(Missing|Damaged)/);
+    const match = issue.title.match(DEFECT_TITLE_REGEX);
     
     let apparatus = 'Rescue 1';
     let compartment = 'Unknown';
@@ -369,13 +388,13 @@ ${resolutionNote}
         }),
       });
 
-      // Close the issue
+      // Close the issue and add Resolved label
       const response = await fetch(`${API_BASE_URL}/issues/${issueNumber}`, {
         method: 'PATCH',
         headers: this.getHeaders(true), // Admin request
         body: JSON.stringify({
           state: 'closed',
-          labels: ['Defect', 'Resolved'],
+          labels: [LABELS.DEFECT, LABELS.RESOLVED],
         }),
       });
 
@@ -392,14 +411,26 @@ ${resolutionNote}
   }
 
   /**
-   * Get fleet status summary (ADMIN ONLY)
+   * Get fleet status summary - computes from defect list (ADMIN ONLY)
+   * This method is kept for backward compatibility but should be deprecated
+   * in favor of computing status directly from getAllDefects() result
    */
   async getFleetStatus(): Promise<Map<string, number>> {
     const defects = await this.getAllDefects();
+    return this.computeFleetStatus(defects);
+  }
+
+  /**
+   * Compute fleet status from a list of defects
+   * Useful for avoiding redundant API calls
+   */
+  computeFleetStatus(defects: Defect[]): Map<string, number> {
     const statusMap = new Map<string, number>();
 
-    // Initialize with Rescue 1 only (since we only support it now)
-    statusMap.set('Rescue 1', 0);
+    // Initialize all apparatus with 0 defects
+    for (const apparatus of APPARATUS_LIST) {
+      statusMap.set(apparatus, 0);
+    }
 
     // Count defects per apparatus
     defects.forEach(defect => {
