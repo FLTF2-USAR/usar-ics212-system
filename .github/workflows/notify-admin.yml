@@ -1,0 +1,32 @@
+name: Notify Admin on Defect
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'Defect')
+    
+    steps:
+      - name: Send Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[MBFD] New Defect Reported: ${{ github.event.issue.title }}"
+          to: admin@mbfd.example.com
+          from: MBFD Checkout System
+          body: |
+            A new defect has been reported in the MBFD Checkout System.
+            
+            Issue: ${{ github.event.issue.title }}
+            Reported by: ${{ github.event.issue.user.login }}
+            
+            View details: ${{ github.event.issue.html_url }}
+            
+            ---
+            This is an automated notification from the MBFD Checkout System.

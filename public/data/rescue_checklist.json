@@ -1,0 +1,40 @@
+{
+  "title": "Rescue Daily Inventory",
+  "compartments": [
+    {
+      "id": "cab",
+      "title": "Front Cab",
+      "items": ["Lights", "Siren", "Mobile Radio", "Air Horn", "No Smoking Sign", "Fuel Level (%)", "DEF Level (%)", "Map Books", "High Vis Vests"]
+    },
+    {
+      "id": "driver_a",
+      "title": "Driver Side - Comp A",
+      "items": ["M Cylinders (2)", "D-Cylinders (4)", "Electric Stair Chair"]
+    },
+    {
+      "id": "driver_b",
+      "title": "Driver Side - Comp B",
+      "items": ["MCI Bag", "Caution Tape", "Road Hazards", "Triangular Markers", "Dry Chem Extinguisher", "SCBA Bottle", "Air Chisel", "600' Rope", "Tool Box"]
+    },
+    {
+      "id": "driver_c",
+      "title": "Driver Side - Comp C",
+      "items": ["Spanner Wrench", "Hydrant Wrench", "Bolt Cutters", "Halligan", "Flat Head Axe", "Glass Cutter", "Sledge Hammer"]
+    },
+    {
+      "id": "officer_a",
+      "title": "Officer Side - Comp A",
+      "items": ["OB Kits", "HandTevey Kit", "Pedi Inflatable Splint", "Yellow Blanket", "Ferno Pedi-Mate", "Cooler", "Tyveks"]
+    },
+    {
+      "id": "officer_b",
+      "title": "Officer Side - Comp B (Dive)",
+      "items": ["Mask & Snorkel", "Fins", "Gloves", "Dive Light", "Rescue Frisbee"]
+    },
+    {
+      "id": "rear",
+      "title": "Patient Compartment",
+      "items": ["Stretcher", "Airway Bag", "Med Box", "LifePak 15", "O2 Bottle", "Spare Sheet", "Ferno 4 Point Harness"]
+    }
+  ]
+}
