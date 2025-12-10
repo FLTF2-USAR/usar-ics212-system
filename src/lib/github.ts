@@ -1,37 +1,70 @@
-import { Octokit } from '@octokit/rest';
-import type { Apparatus, Defect, GitHubIssue, InspectionSubmission } from '../types';
+import type { Defect, GitHubIssue, InspectionSubmission } from '../types';
 
-const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN;
-const REPO_OWNER = 'pdarleyjr';
-const REPO_NAME = 'mbfd-checkout-system';
+// Cloudflare Worker API endpoint
+const API_BASE_URL = 'https://mbfd-github-proxy.pdarleyjr.workers.dev/api';
 
 class GitHubService {
-  private octokit: Octokit;
+  private adminPassword: string | null = null;
 
   constructor() {
-    if (!GITHUB_TOKEN) {
-      throw new Error('GitHub token not configured. Please contact your system administrator.');
+    // No token needed in frontend - handled by Cloudflare Worker
+  }
+
+  /**
+   * Set admin password for authenticated requests
+   */
+  setAdminPassword(password: string): void {
+    this.adminPassword = password;
+  }
+
+  /**
+   * Clear admin password
+   */
+  clearAdminPassword(): void {
+    this.adminPassword = null;
+  }
+
+  /**
+   * Check if admin is authenticated
+   */
+  isAdminAuthenticated(): boolean {
+    return this.adminPassword !== null;
+  }
+
+  /**
+   * Get headers for API requests
+   */
+  private getHeaders(isAdmin: boolean = false): HeadersInit {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (isAdmin && this.adminPassword) {
+      headers['X-Admin-Password'] = this.adminPassword;
     }
 
-    this.octokit = new Octokit({
-      auth: GITHUB_TOKEN,
-    });
+    return headers;
   }
 
   /**
    * Fetch all open defects for a specific apparatus
    * Returns a map of items to their issue numbers for quick lookup
    */
-  async checkExistingDefects(apparatus: Apparatus): Promise<Map<string, GitHubIssue>> {
+  async checkExistingDefects(apparatus: string): Promise<Map<string, GitHubIssue>> {
     try {
-      const { data: issues } = await this.octokit.rest.issues.listForRepo({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        state: 'open',
-        labels: `Defect,${apparatus}`,
-        per_page: 100,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/issues?state=open&labels=Defect,${encodeURIComponent(apparatus)}&per_page=100`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(),
+        }
+      );
 
+      if (!response.ok) {
+        throw new Error(`Failed to fetch defects: ${response.statusText}`);
+      }
+
+      const issues: GitHubIssue[] = await response.json();
       const defectMap = new Map<string, GitHubIssue>();
 
       for (const issue of issues) {
@@ -41,7 +74,7 @@ class GitHubService {
         if (match) {
           const [, compartment, item] = match;
           const key = `${compartment}:${item}`;
-          defectMap.set(key, issue as GitHubIssue);
+          defectMap.set(key, issue);
         }
       }
 
@@ -99,7 +132,7 @@ class GitHubService {
    * Create a new defect issue
    */
   private async createDefectIssue(
-    apparatus: Apparatus,
+    apparatus: string,
     compartment: string,
     item: string,
     status: 'missing' | 'damaged',
@@ -132,13 +165,15 @@ ${notes}
     }
 
     try {
-      await this.octokit.rest.issues.create({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        title,
-        body,
-        labels,
+      const response = await fetch(`${API_BASE_URL}/issues`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ title, body, labels }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create issue: ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Error creating defect issue:', error);
       throw error;
@@ -168,12 +203,15 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
     `.trim();
 
     try {
-      await this.octokit.rest.issues.createComment({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        issue_number: issueNumber,
-        body,
+      const response = await fetch(`${API_BASE_URL}/issues/${issueNumber}/comments`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ body }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to add comment: ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Error adding comment to issue:', error);
       throw error;
@@ -208,20 +246,27 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
     `.trim();
 
     try {
-      const { data: issue } = await this.octokit.rest.issues.create({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        title,
-        body,
-        labels: ['Log', apparatus],
+      const response = await fetch(`${API_BASE_URL}/issues`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          title,
+          body,
+          labels: ['Log', apparatus],
+        }),
       });
 
+      if (!response.ok) {
+        throw new Error(`Failed to create log: ${response.statusText}`);
+      }
+
+      const issue = await response.json();
+
       // Immediately close the issue to mark it as a log entry
-      await this.octokit.rest.issues.update({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        issue_number: issue.number,
-        state: 'closed',
+      await fetch(`${API_BASE_URL}/issues/${issue.number}`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ state: 'closed' }),
       });
     } catch (error) {
       console.error('Error creating log entry:', error);
@@ -230,19 +275,27 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
   }
 
   /**
-   * Fetch all open defects across all apparatus
+   * Fetch all open defects across all apparatus (ADMIN ONLY)
    */
   async getAllDefects(): Promise<Defect[]> {
     try {
-      const { data: issues } = await this.octokit.rest.issues.listForRepo({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        state: 'open',
-        labels: 'Defect',
-        per_page: 100,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/issues?state=open&labels=Defect&per_page=100`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true), // Admin request
+        }
+      );
 
-      return issues.map(issue => this.parseDefectFromIssue(issue as GitHubIssue));
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized. Please enter the admin password.');
+        }
+        throw new Error(`Failed to fetch defects: ${response.statusText}`);
+      }
+
+      const issues: GitHubIssue[] = await response.json();
+      return issues.map(issue => this.parseDefectFromIssue(issue));
     } catch (error) {
       console.error('Error fetching all defects:', error);
       throw error;
@@ -255,13 +308,13 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
   private parseDefectFromIssue(issue: GitHubIssue): Defect {
     const match = issue.title.match(/\[(.+)\]\s+(.+):\s+(.+?)\s+-\s+(Missing|Damaged)/);
     
-    let apparatus: Apparatus = 'Rescue 1';
+    let apparatus = 'Rescue 1';
     let compartment = 'Unknown';
     let item = 'Unknown';
     let status: 'missing' | 'damaged' = 'missing';
 
     if (match) {
-      apparatus = match[1] as Apparatus;
+      apparatus = match[1];
       compartment = match[2];
       item = match[3];
       const statusStr = match[4];
@@ -275,7 +328,7 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
       item,
       status,
       notes: issue.body || '',
-      reportedBy: issue.user.login,
+      reportedBy: issue.user?.login || 'Unknown',
       reportedAt: issue.created_at,
       updatedAt: issue.updated_at,
       resolved: false,
@@ -283,16 +336,16 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
   }
 
   /**
-   * Resolve a defect by closing the issue
+   * Resolve a defect by closing the issue (ADMIN ONLY)
    */
   async resolveDefect(issueNumber: number, resolutionNote: string, resolvedBy: string): Promise<void> {
     try {
       // Add resolution comment
-      await this.octokit.rest.issues.createComment({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        issue_number: issueNumber,
-        body: `
+      await fetch(`${API_BASE_URL}/issues/${issueNumber}/comments`, {
+        method: 'POST',
+        headers: this.getHeaders(true), // Admin request
+        body: JSON.stringify({
+          body: `
 ## ✅ Defect Resolved
 
 **Resolved By:** ${resolvedBy}
@@ -303,17 +356,26 @@ ${resolutionNote}
 
 ---
 *This defect was marked as resolved via the MBFD Admin Dashboard.*
-        `.trim(),
+          `.trim(),
+        }),
       });
 
       // Close the issue
-      await this.octokit.rest.issues.update({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-        issue_number: issueNumber,
-        state: 'closed',
-        labels: ['Defect', 'Resolved'],
+      const response = await fetch(`${API_BASE_URL}/issues/${issueNumber}`, {
+        method: 'PATCH',
+        headers: this.getHeaders(true), // Admin request
+        body: JSON.stringify({
+          state: 'closed',
+          labels: ['Defect', 'Resolved'],
+        }),
       });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized. Please enter the admin password.');
+        }
+        throw new Error(`Failed to resolve defect: ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Error resolving defect:', error);
       throw error;
@@ -321,15 +383,14 @@ ${resolutionNote}
   }
 
   /**
-   * Get fleet status summary
+   * Get fleet status summary (ADMIN ONLY)
    */
-  async getFleetStatus(): Promise<Map<Apparatus, number>> {
+  async getFleetStatus(): Promise<Map<string, number>> {
     const defects = await this.getAllDefects();
-    const statusMap = new Map<Apparatus, number>();
+    const statusMap = new Map<string, number>();
 
-    // Initialize all apparatus with 0 defects
-    const allApparatus: Apparatus[] = ['Rescue 1', 'Rescue 2', 'Rescue 3', 'Rescue 11', 'Engine 1'];
-    allApparatus.forEach(apparatus => statusMap.set(apparatus, 0));
+    // Initialize with Rescue 1 only (since we only support it now)
+    statusMap.set('Rescue 1', 0);
 
     // Count defects per apparatus
     defects.forEach(defect => {

@@ -1,25 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
 import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
-import type { Apparatus, Defect } from '../types';
+import type { Defect } from '../types';
+
+const ADMIN_PASSWORD = 'MBFDsupport!';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [fleetStatus, setFleetStatus] = useState<Map<Apparatus, number>>(new Map());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [fleetStatus, setFleetStatus] = useState<Map<string, number>>(new Map());
   const [defects, setDefects] = useState<Defect[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedDefect, setSelectedDefect] = useState<Defect | null>(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [isResolving, setIsResolving] = useState(false);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  const handlePasswordSubmit = () => {
+    if (passwordInput === ADMIN_PASSWORD) {
+      githubService.setAdminPassword(ADMIN_PASSWORD);
+      setIsAuthenticated(true);
+      setPasswordError('');
+      loadDashboardData();
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -32,7 +44,13 @@ export const AdminDashboard: React.FC = () => {
       setDefects(allDefects);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-      alert('Error loading dashboard. Please check your GitHub token configuration.');
+      if (error instanceof Error && error.message.includes('Unauthorized')) {
+        alert('Authentication failed. Please re-enter the admin password.');
+        setIsAuthenticated(false);
+        githubService.clearAdminPassword();
+      } else {
+        alert('Error loading dashboard. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -60,11 +78,83 @@ export const AdminDashboard: React.FC = () => {
       alert('Defect resolved successfully!');
     } catch (error) {
       console.error('Error resolving defect:', error);
-      alert('Error resolving defect. Please try again.');
+      if (error instanceof Error && error.message.includes('Unauthorized')) {
+        alert('Authentication failed. Please re-enter the admin password.');
+        setIsAuthenticated(false);
+        githubService.clearAdminPassword();
+      } else {
+        alert('Error resolving defect. Please try again.');
+      }
     } finally {
       setIsResolving(false);
     }
   };
+
+  // Show password prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="py-8">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+                <Lock className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                Admin Access Required
+              </h1>
+              <p className="text-gray-600">Enter the admin password to continue</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    setPasswordError('');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handlePasswordSubmit();
+                    }
+                  }}
+                  placeholder="Enter admin password"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  autoFocus
+                />
+                {passwordError && (
+                  <p className="text-red-600 text-sm mt-2">{passwordError}</p>
+                )}
+              </div>
+
+              <Button
+                onClick={handlePasswordSubmit}
+                className="w-full"
+                size="lg"
+              >
+                Access Admin Dashboard
+              </Button>
+
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+                >
+                  ← Back to Login
+                </button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -77,7 +167,8 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  const apparatusList: Apparatus[] = ['Rescue 1', 'Rescue 2', 'Rescue 3', 'Rescue 11', 'Engine 1'];
+  // Only show Rescue 1 - removed other apparatus
+  const apparatusList: string[] = ['Rescue 1'];
 
   return (
     <div className="min-h-screen bg-gray-50">

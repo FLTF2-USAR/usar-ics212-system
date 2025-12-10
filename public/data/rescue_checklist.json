@@ -1,40 +1,183 @@
 {
-  "title": "Rescue Daily Inventory",
+  "title": "Rescue 1 Daily Inventory",
+  "dailySchedule": [
+    {
+      "day": "Monday",
+      "tasks": []
+    },
+    {
+      "day": "Tuesday",
+      "tasks": []
+    },
+    {
+      "day": "Wednesday",
+      "tasks": ["Bunker Gear Check"]
+    },
+    {
+      "day": "Thursday",
+      "tasks": ["Friday Rock Inventory", "Narcotic Check"]
+    },
+    {
+      "day": "Friday",
+      "tasks": ["SCBA Complete Checkout"]
+    },
+    {
+      "day": "Saturday",
+      "tasks": ["Inventory and Stock Reserves", "COVID Decon", "Vehicle Compartment(s) Decon"]
+    },
+    {
+      "day": "Sunday",
+      "tasks": ["None"]
+    }
+  ],
+  "officerChecklist": [
+    { "id": "lock_box_key", "name": "Lock Box Key" },
+    { "id": "elevator_key", "name": "Elevator Key" },
+    { "id": "mileage_delt", "name": "Mileage Delt" },
+    { "id": "laptop_num", "name": "Laptop #" },
+    { "id": "toughbook_num", "name": "Toughbook #" },
+    { "id": "psi_front", "name": "PSI - Front #" },
+    { "id": "psi_rear", "name": "PSI - Rear #" },
+    { "id": "brake_test", "name": "Brake Test" },
+    { "id": "narcotic_book", "name": "Narcotic Book" },
+    { "id": "narcotic_seal", "name": "Narcotic Seal # M" },
+    { "id": "cylinder_psi", "name": "Cylinder PSI" },
+    { "id": "vehicle_log_book", "name": "Vehicle Log Book" },
+    { "id": "fuel_card", "name": "Fuel Card" },
+    { "id": "hydrant_maps", "name": "Hydrant Maps" }
+  ],
   "compartments": [
     {
       "id": "cab",
       "title": "Front Cab",
-      "items": ["Lights", "Siren", "Mobile Radio", "Air Horn", "No Smoking Sign", "Fuel Level (%)", "DEF Level (%)", "Map Books", "High Vis Vests"]
+      "items": [
+        "Lights (Check)",
+        "Siren (Check)",
+        "Mobile Radio (Test)",
+        "Air Horn (Check)",
+        "No Smoking Sign"
+      ]
     },
     {
       "id": "driver_a",
-      "title": "Driver Side - Comp A",
-      "items": ["M Cylinders (2)", "D-Cylinders (4)", "Electric Stair Chair"]
+      "title": "Driver Side - Compartment A",
+      "items": [
+        "M Cylinders (2)",
+        "D-Cylinders (4)",
+        "Electric Stair Chair"
+      ]
     },
     {
       "id": "driver_b",
-      "title": "Driver Side - Comp B",
-      "items": ["MCI Bag", "Caution Tape", "Road Hazards", "Triangular Markers", "Dry Chem Extinguisher", "SCBA Bottle", "Air Chisel", "600' Rope", "Tool Box"]
+      "title": "Driver Side - Compartment B",
+      "items": [
+        "MCI Bag",
+        "Caution Tape",
+        "Road Hazards",
+        "Triangular Markers",
+        "Dry Chem A,B,C Extinguisher (2)",
+        "SCBA Bottle (1)",
+        "Air Chisel",
+        "600' Poly Rescue Rope",
+        "Torpedo Buoy",
+        "Tool Box"
+      ]
     },
     {
       "id": "driver_c",
-      "title": "Driver Side - Comp C",
-      "items": ["Spanner Wrench", "Hydrant Wrench", "Bolt Cutters", "Halligan", "Flat Head Axe", "Glass Cutter", "Sledge Hammer"]
+      "title": "Driver Side - Compartment C",
+      "items": [
+        "Spanner Wrench (2)",
+        "Hydrant Wrench",
+        "Bolt Cutters",
+        "Halligan",
+        "Flat Head Axe",
+        "Glass Cutter",
+        "Sledge"
+      ]
+    },
+    {
+      "id": "driver_d",
+      "title": "Driver Side - Compartment D",
+      "items": [
+        "PAR Tags (2)",
+        "SCBAs (3)",
+        "Helmet Shields (3)",
+        "Passports"
+      ]
+    },
+    {
+      "id": "stretcher",
+      "title": "Stretcher",
+      "items": [
+        "Airway Bag",
+        "Med Box/Bag"
+      ]
+    },
+    {
+      "id": "lifepak",
+      "title": "LifePak 15",
+      "items": [
+        "LifePak 15",
+        "O2 Bottle",
+        "Spare Sheet (1)",
+        "Ferno 4 Point Harness with lap belt"
+      ]
     },
     {
       "id": "officer_a",
-      "title": "Officer Side - Comp A",
-      "items": ["OB Kits", "HandTevey Kit", "Pedi Inflatable Splint", "Yellow Blanket", "Ferno Pedi-Mate", "Cooler", "Tyveks"]
+      "title": "Officer Side - Compartment A",
+      "items": [
+        "OB Kits (2)",
+        "HandTevy Kit",
+        "Pedi Inflatable Splint",
+        "Yellow Blanket (2)",
+        "Ferno Pedi-Mate",
+        "Cooler",
+        "Tyveks (3)"
+      ]
     },
     {
       "id": "officer_b",
-      "title": "Officer Side - Comp B (Dive)",
-      "items": ["Mask & Snorkel", "Fins", "Gloves", "Dive Light", "Rescue Frisbee"]
+      "title": "Officer Side - Compartment B (Dive)",
+      "items": [
+        "Mask & Snorkel (2)",
+        "Fins (2)",
+        "Gloves (2)",
+        "Dive Light",
+        "Rescue Frisbee"
+      ]
     },
     {
-      "id": "rear",
+      "id": "officer_c",
+      "title": "Officer Side - Compartment C",
+      "items": [
+        "Vinegar",
+        "Squeegee",
+        "SpeedyCleanz"
+      ]
+    },
+    {
+      "id": "officer_d",
+      "title": "Officer Side - Compartment D",
+      "items": [
+        "Backboard",
+        "KED",
+        "Traction Splint",
+        "C-Collars (3 Each)",
+        "Head Beds (3)",
+        "Cardboard Splints (5 Long / 5 Short)",
+        "Backboard Straps (6)"
+      ]
+    },
+    {
+      "id": "patient_compartment",
       "title": "Patient Compartment",
-      "items": ["Stretcher", "Airway Bag", "Med Box", "LifePak 15", "O2 Bottle", "Spare Sheet", "Ferno 4 Point Harness"]
+      "items": [
+        "No Smoking Sign",
+        "Transport Fee Chart",
+        "Flash Lights (2)"
+      ]
     }
   ]
 }
