@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Check, X, AlertTriangle, Camera, Image as ImageIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Modal } from './ui/Modal';
@@ -22,8 +22,6 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [modalType, setModalType] = useState<'missing' | 'damaged'>('missing');
   const [notes, setNotes] = useState('');
-  const [photoPreview, setPhotoPreview] = useState<string>('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Extract item data
   const itemName = typeof item === 'string' ? item : item.name;
@@ -34,21 +32,9 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
     if (newStatus === 'present') {
       onStatusChange('present');
       setNotes('');
-      setPhotoPreview('');
     } else {
       setModalType(newStatus);
       setShowNotesModal(true);
-    }
-  };
-
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -57,16 +43,14 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
       alert('Please enter notes describing the issue');
       return;
     }
-    onStatusChange(modalType, notes, photoPreview);
+    onStatusChange(modalType, notes);
     setShowNotesModal(false);
     setNotes('');
-    setPhotoPreview('');
   };
 
   const handleCancel = () => {
     setShowNotesModal(false);
     setNotes('');
-    setPhotoPreview('');
   };
 
   return (
@@ -183,55 +167,18 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
               placeholder="Describe the issue in detail..."
               rows={4}
               className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-500 outline-none transition-all resize-none text-base"
+              autoFocus
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Provide as much detail as possible to help with resolution
+            </p>
           </div>
 
-          {/* Photo Upload */}
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Photo (Optional)
-            </label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handlePhotoSelect}
-              className="hidden"
-            />
-            
-            {photoPreview ? (
-              <div className="relative">
-                <img
-                  src={photoPreview}
-                  alt="Issue preview"
-                  className="w-full h-48 object-cover rounded-xl border-2 border-gray-300"
-                />
-                <button
-                  onClick={() => {
-                    setPhotoPreview('');
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                  }}
-                  className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg hover:bg-red-600 transition-colors"
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-center active:scale-95"
-              >
-                <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-gray-600">
-                  Tap to take a photo
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Document the issue visually
-                </p>
-              </button>
-            )}
+          {/* TODO: Photo upload will be implemented in future update */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-xs text-blue-800">
+              📸 <strong>Photo upload coming soon!</strong> For now, please include detailed descriptions in your notes.
+            </p>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -239,14 +186,7 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
               onClick={handleSubmitNotes}
               className="flex-1 h-12 text-base font-bold rounded-xl"
             >
-              {photoPreview ? (
-                <>
-                  <ImageIcon className="w-5 h-5 mr-2" />
-                  Submit with Photo
-                </>
-              ) : (
-                <>Submit Report</>
-              )}
+              Submit Report
             </Button>
             <Button
               onClick={handleCancel}

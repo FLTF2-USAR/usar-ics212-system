@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Truck, ChevronDown } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
-import type { Rank, Shift, User } from '../types';
+import { APPARATUS_LIST } from '../lib/config';
+import type { Rank, Shift, User, Apparatus } from '../types';
 
 const ranks: Rank[] = ['Firefighter', 'DE', 'Lieutenant', 'Captain', 'Chief'];
 const shifts: Shift[] = ['A', 'B', 'C'];
@@ -17,12 +18,20 @@ export const LoginScreen: React.FC = () => {
     shift: 'A',
     unitNumber: 'R1',
   });
+  const [validationError, setValidationError] = useState('');
 
   const handleStartInspection = () => {
+    // Validate all required fields
     if (!user.name.trim()) {
-      alert('Please enter your name');
+      setValidationError('Please enter your name');
       return;
     }
+    if (!user.unitNumber.trim()) {
+      setValidationError('Please enter a unit number');
+      return;
+    }
+    
+    setValidationError('');
     
     // Store user data in session storage
     sessionStorage.setItem('user', JSON.stringify(user));
@@ -54,8 +63,8 @@ export const LoginScreen: React.FC = () => {
 
           {/* Apparatus Display */}
           <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-4 mb-6 text-center">
-            <p className="text-sm text-gray-600 font-semibold mb-1">APPARATUS</p>
-            <p className="text-3xl font-bold text-red-700">RESCUE 1</p>
+            <p className="text-sm text-gray-600 font-semibold mb-1">SELECTED APPARATUS</p>
+            <p className="text-3xl font-bold text-red-700">{user.apparatus.toUpperCase()}</p>
             <p className="text-xs text-gray-500 mt-1">Daily Equipment Inspection</p>
           </div>
 
@@ -70,10 +79,38 @@ export const LoginScreen: React.FC = () => {
                 id="name"
                 type="text"
                 value={user.name}
-                onChange={(e) => setUser({ ...user, name: e.target.value })}
+                onChange={(e) => {
+                  setUser({ ...user, name: e.target.value });
+                  setValidationError('');
+                }}
                 placeholder="Enter your full name"
                 className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-500 outline-none transition-all text-base font-medium placeholder-gray-400"
               />
+            </div>
+
+            {/* Apparatus Selector */}
+            <div>
+              <label htmlFor="apparatus" className="block text-sm font-bold text-gray-700 mb-2">
+                Apparatus *
+              </label>
+              <div className="relative">
+                <select
+                  id="apparatus"
+                  value={user.apparatus}
+                  onChange={(e) => {
+                    setUser({ ...user, apparatus: e.target.value as Apparatus });
+                    setValidationError('');
+                  }}
+                  className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-500 outline-none appearance-none bg-white transition-all text-base font-medium"
+                >
+                  {APPARATUS_LIST.map((apparatus) => (
+                    <option key={apparatus} value={apparatus}>
+                      {apparatus}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              </div>
             </div>
 
             {/* Rank and Shift Row */}
@@ -126,17 +163,27 @@ export const LoginScreen: React.FC = () => {
             {/* Unit/Vehicle Number */}
             <div>
               <label htmlFor="unitNumber" className="block text-sm font-bold text-gray-700 mb-2">
-                Unit/Vehicle #
+                Unit/Vehicle # *
               </label>
               <input
                 id="unitNumber"
                 type="text"
                 value={user.unitNumber}
-                onChange={(e) => setUser({ ...user, unitNumber: e.target.value })}
-                placeholder="R1"
+                onChange={(e) => {
+                  setUser({ ...user, unitNumber: e.target.value });
+                  setValidationError('');
+                }}
+                placeholder="e.g., R1, E1, R11"
                 className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-500 outline-none transition-all text-base font-medium placeholder-gray-400"
               />
             </div>
+
+            {/* Validation Error */}
+            {validationError && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3">
+                <p className="text-sm text-red-700 font-semibold">⚠️ {validationError}</p>
+              </div>
+            )}
 
             {/* Start Button */}
             <Button

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, CheckCircle, Calendar, Shield, Gauge, CheckCheck } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardHeader, CardContent } from './ui/Card';
+import { Modal } from './ui/Modal';
 import { InspectionCard } from './InspectionCard';
 import { githubService } from '../lib/github';
 import { useDeviceDetection } from '../hooks/useDeviceDetection';
@@ -20,6 +21,8 @@ export const InspectionWizard: React.FC = () => {
   const [officerItems, setOfficerItems] = useState<OfficerChecklistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submissionDefectCount, setSubmissionDefectCount] = useState(0);
 
   // LocalStorage for remembering last entries
   const [lastOfficerValues, setLastOfficerValues] = useLocalStorage<Record<string, string | number>>('mbfd_last_officer_values', {});
@@ -177,16 +180,31 @@ export const InspectionWizard: React.FC = () => {
         officerChecklist: officerItems,
       });
 
-      // Clear session and navigate to completion screen
+      // Clear session and show success modal
       sessionStorage.removeItem('user');
-      alert('✅ Inspection submitted successfully!');
-      navigate('/');
+      setSubmissionDefectCount(defects.length);
+      setShowSuccessModal(true);
     } catch (error) {
       console.error('Error submitting inspection:', error);
-      alert('Error submitting inspection. Please try again.');
+      
+      // Show user-friendly error message
+      let errorMessage = 'Error submitting inspection. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'No internet connection. Please check your connection and try again.';
+        } else if (error.message.includes('defect submissions failed')) {
+          errorMessage = 'Some defects failed to submit. Please check your connection and try again. Partial data may have been recorded.';
+        }
+      }
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    navigate('/');
   };
 
   if (isLoading) {
@@ -428,6 +446,48 @@ export const InspectionWizard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Success Modal */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={handleSuccessModalClose}
+        title="Inspection Complete!"
+      >
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-12 h-12 text-green-600" />
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              ✅ Inspection Submitted Successfully!
+            </h3>
+            <p className="text-gray-600">
+              Your {user?.apparatus} inspection has been recorded.
+            </p>
+          </div>
+
+          <div className="bg-gray-50 rounded-xl p-4">
+            <p className="text-sm text-gray-700">
+              <strong>Defects Reported:</strong> {submissionDefectCount}
+            </p>
+            {submissionDefectCount > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                Issues have been logged and will be reviewed by maintenance.
+              </p>
+            )}
+          </div>
+
+          <Button
+            onClick={handleSuccessModalClose}
+            className="w-full h-12 text-base font-bold rounded-xl"
+          >
+            Return to Home
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };
@@ -472,7 +532,7 @@ const OfficerChecklistField: React.FC<OfficerChecklistFieldProps> = ({ item, ind
         <input
           type="checkbox"
           checked={item.checked}
-          onChange={(e) => handleChange(e.target.checked, item.value)}
+          onChange={(e) => handleChange(item.checked, item.value)}
           className="w-5 h-5 rounded border-2 border-gray-300 text-blue-600"
         />
         <label className="font-medium text-gray-900 text-sm">
