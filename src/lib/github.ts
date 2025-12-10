@@ -368,6 +368,28 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
    */
   async resolveDefect(issueNumber: number, resolutionNote: string, resolvedBy: string): Promise<void> {
     try {
+      // First, fetch the issue to get its current labels
+      const issueResponse = await fetch(`${API_BASE_URL}/issues/${issueNumber}`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      if (!issueResponse.ok) {
+        throw new Error(`Failed to fetch issue details: ${issueResponse.statusText}`);
+      }
+
+      const issue = await issueResponse.json();
+      const currentLabels = issue.labels.map((label: any) => label.name);
+      
+      // Preserve apparatus labels and defect label, add resolved label
+      const apparatusLabel = currentLabels.find((label: string) => 
+        APPARATUS_LIST.includes(label as any)
+      );
+      const newLabels = [LABELS.DEFECT, LABELS.RESOLVED];
+      if (apparatusLabel) {
+        newLabels.push(apparatusLabel);
+      }
+      
       // Add resolution comment
       await fetch(`${API_BASE_URL}/issues/${issueNumber}/comments`, {
         method: 'POST',
@@ -388,13 +410,13 @@ ${resolutionNote}
         }),
       });
 
-      // Close the issue and add Resolved label
+      // Close the issue and update labels (preserving apparatus label)
       const response = await fetch(`${API_BASE_URL}/issues/${issueNumber}`, {
         method: 'PATCH',
         headers: this.getHeaders(true), // Admin request
         body: JSON.stringify({
           state: 'closed',
-          labels: [LABELS.DEFECT, LABELS.RESOLVED],
+          labels: newLabels,
         }),
       });
 
@@ -439,6 +461,172 @@ ${resolutionNote}
     });
 
     return statusMap;
+  }
+
+  /**
+   * Fetch inspection logs (ADMIN ONLY)
+   * Get closed issues with 'Log' label
+   */
+  async getInspectionLogs(days: number = 7): Promise<GitHubIssue[]> {
+    try {
+      const sinceDate = new Date();
+      sinceDate.setDate(sinceDate.getDate() - days);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/issues?state=closed&labels=${LABELS.LOG}&per_page=100&since=${sinceDate.toISOString()}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true), // Admin request
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized. Please enter the admin password.');
+        }
+        throw new Error(`Failed to fetch logs: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error fetching inspection logs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get daily submission statistics (ADMIN ONLY)
+   * Returns which vehicles have submitted today and total submissions per vehicle
+   */
+  async getDailySubmissions(): Promise<{
+    today: string[];
+    totals: Map<string, number>;
+    lastSubmission: Map<string, string>;
+  }> {
+    try {
+      const logs = await this.getInspectionLogs(1); // Today's logs
+      const allLogs = await this.getInspectionLogs(30); // Last 30 days for totals
+      
+      const today = new Date().toLocaleDateString('en-US');
+      const todaySubmissions: string[] = [];
+      const totals = new Map<string, number>();
+      const lastSubmission = new Map<string, string>();
+      
+      // Initialize totals for all apparatus
+      APPARATUS_LIST.forEach(apparatus => {
+        totals.set(apparatus, 0);
+      });
+      
+      // Process all logs for totals and find latest submissions
+      allLogs.forEach(log => {
+        const match = log.title.match(/\[(.+)\]\s+Daily Inspection/);
+        if (match) {
+          const apparatus = match[1];
+          const current = totals.get(apparatus) || 0;
+          totals.set(apparatus, current + 1);
+          
+          // Track most recent submission date
+          const submissionDate = new Date(log.created_at).toLocaleDateString('en-US');
+          const currentLast = lastSubmission.get(apparatus);
+          if (!currentLast || new Date(log.created_at) > new Date(currentLast)) {
+            lastSubmission.set(apparatus, submissionDate);
+          }
+        }
+      });
+      
+      // Check today's submissions
+      logs.forEach(log => {
+        const match = log.title.match(/\[(.+)\]\s+Daily Inspection/);
+        if (match) {
+          const apparatus = match[1];
+          const logDate = new Date(log.created_at).toLocaleDateString('en-US');
+          if (logDate === today && !todaySubmissions.includes(apparatus)) {
+            todaySubmissions.push(apparatus);
+          }
+        }
+      });
+      
+      return { today: todaySubmissions, totals, lastSubmission };
+    } catch (error) {
+      console.error('Error getting daily submissions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Analyze defects to identify low stock items (ADMIN ONLY)
+   * Items reported as missing multiple times may indicate supply issues
+   */
+  async analyzeLowStockItems(): Promise<Array<{
+    item: string;
+    compartment: string;
+    apparatus: string[];
+    occurrences: number;
+  }>> {
+    try {
+      // Get all defects from last 30 days
+      const sinceDate = new Date();
+      sinceDate.setDate(sinceDate.getDate() - 30);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/issues?state=all&labels=${LABELS.DEFECT}&per_page=100&since=${sinceDate.toISOString()}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch defects for analysis: ${response.statusText}`);
+      }
+
+      const issues: GitHubIssue[] = await response.json();
+      const itemMap = new Map<string, {
+        compartment: string;
+        apparatus: Set<string>;
+        occurrences: number;
+      }>();
+
+      // Analyze missing items
+      issues.forEach(issue => {
+        if (issue.title.includes('Missing')) {
+          const match = issue.title.match(DEFECT_TITLE_REGEX);
+          if (match) {
+            const [, apparatus, compartment, item] = match;
+            const key = `${compartment}:${item}`;
+            
+            if (itemMap.has(key)) {
+              const data = itemMap.get(key)!;
+              data.apparatus.add(apparatus);
+              data.occurrences++;
+            } else {
+              itemMap.set(key, {
+                compartment,
+                apparatus: new Set([apparatus]),
+                occurrences: 1,
+              });
+            }
+          }
+        }
+      });
+
+      // Convert to array and filter items with multiple occurrences
+      const lowStockItems = Array.from(itemMap.entries())
+        .filter(([, data]) => data.occurrences >= 2) // 2+ occurrences suggests supply issue
+        .map(([key, data]) => ({
+          item: key.split(':')[1],
+          compartment: data.compartment,
+          apparatus: Array.from(data.apparatus),
+          occurrences: data.occurrences,
+        }))
+        .sort((a, b) => b.occurrences - a.occurrences);
+
+      return lowStockItems;
+    } catch (error) {
+      console.error('Error analyzing low stock items:', error);
+      throw error;
+    }
   }
 }
 
