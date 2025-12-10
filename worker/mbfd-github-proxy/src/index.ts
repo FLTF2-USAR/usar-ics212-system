@@ -34,8 +34,10 @@ export default {
       return jsonResponse({ status: 'ok', service: 'MBFD GitHub Proxy' });
     }
 
-    // Check if this is an admin-only endpoint
-    const isAdminEndpoint = path.includes('/admin/') || path.includes('/resolve');
+    // Check if this is an admin-only endpoint (NOT issue creation)
+    const isAdminEndpoint = path.includes('/admin/') || 
+                            path.includes('/resolve') || 
+                            (path.startsWith('/api/issues/') && request.method === 'PATCH');
     
     if (isAdminEndpoint) {
       // Verify admin password

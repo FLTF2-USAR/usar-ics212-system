@@ -235,10 +235,10 @@ export const InspectionWizard: React.FC = () => {
 
   // Determine container width based on device
   const containerClass = device.isDesktop 
-    ? 'w-full px-8' 
+    ? 'w-full' 
     : device.isTablet 
-    ? 'max-w-4xl' 
-    : 'max-w-2xl';
+    ? 'max-w-4xl px-4' 
+    : 'max-w-2xl px-4';
 
   // Grid columns based on device
   const gridClass = device.isDesktop 
@@ -249,7 +249,7 @@ export const InspectionWizard: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-24">
       {/* Header */}
       <div className="bg-gradient-to-r from-red-600 to-red-700 text-white sticky top-0 z-10 shadow-xl">
-        <div className={`${containerClass} mx-auto px-4 py-4`}>
+        <div className={`${containerClass} mx-auto ${device.isDesktop ? 'px-6' : 'px-4'} py-4`}>
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold">{user.apparatus}</h1>
@@ -289,7 +289,7 @@ export const InspectionWizard: React.FC = () => {
 
       {/* Daily Schedule Banner */}
       {todaySchedule && todaySchedule.tasks.length > 0 && todaySchedule.tasks[0] !== 'None' && (
-        <div className={`${containerClass} mx-auto px-4 mt-4`}>
+        <div className={`${containerClass} mx-auto ${device.isDesktop ? 'px-6' : 'px-4'} mt-4`}>
           <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-2xl p-4">
             <div className="flex items-start gap-3">
               <Calendar className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -307,8 +307,8 @@ export const InspectionWizard: React.FC = () => {
       )}
 
       {/* Content */}
-      <div className={`${containerClass} mx-auto px-4 py-6`}>
-        <Card className="shadow-2xl">
+      <div className={`${containerClass} mx-auto ${device.isDesktop ? 'px-6' : 'px-4'} py-6`}>
+        <Card className={`shadow-2xl ${device.isDesktop ? 'rounded-none' : ''}`}>
           <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -341,7 +341,7 @@ export const InspectionWizard: React.FC = () => {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="p-4">
+          <CardContent className={device.isDesktop ? "p-6" : "p-4"}>
             {isOfficerStep ? (
               <div className={gridClass}>
                 {officerItems.map((item, idx) => (
@@ -384,7 +384,7 @@ export const InspectionWizard: React.FC = () => {
 
       {/* Navigation Footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 p-4 shadow-2xl">
-        <div className={`${containerClass} mx-auto flex gap-3`}>
+        <div className={`${containerClass} mx-auto ${device.isDesktop ? 'px-6' : ''} flex gap-3`}>
           {currentStep > 0 && (
             <Button
               onClick={() => setCurrentStep(currentStep - 1)}
