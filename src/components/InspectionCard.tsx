@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, X, AlertTriangle, Camera, Image as ImageIcon } from 'lucide-react';
+import { Check, X, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';

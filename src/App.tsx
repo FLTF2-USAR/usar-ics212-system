@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 
 // Lazy load route components for code splitting
@@ -18,7 +18,7 @@ const LoadingFallback = () => (
 
 function App() {
   return (
-    <BrowserRouter basename="/mbfd-checkout-system">
+    <HashRouter>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/" element={<LoginScreen />} />
@@ -26,7 +26,7 @@ function App() {
           <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </Suspense>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

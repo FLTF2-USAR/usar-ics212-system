@@ -532,7 +532,7 @@ const OfficerChecklistField: React.FC<OfficerChecklistFieldProps> = ({ item, ind
         <input
           type="checkbox"
           checked={item.checked}
-          onChange={(e) => handleChange(item.checked, item.value)}
+          onChange={() => handleChange(item.checked, item.value)}
           className="w-5 h-5 rounded border-2 border-gray-300 text-blue-600"
         />
         <label className="font-medium text-gray-900 text-sm">
