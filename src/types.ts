@@ -60,7 +60,10 @@ export interface ChecklistData {
 }
 
 // Fixed apparatus casing to match UI usage
-export type Apparatus = 'Rescue 1' | 'Rescue 2' | 'Rescue 3' | 'Rescue 11' | 'Engine 1';
+export type Apparatus = 
+  | 'Engine 1' | 'Engine 2' | 'Engine 3' | 'Engine 4'
+  | 'Rescue 1' | 'Rescue 2' | 'Rescue 3' | 'Rescue 4'
+  | 'Rescue 11' | 'Rescue 22' | 'Rescue 44';
 export type ItemStatus = 'present' | 'missing' | 'damaged';
 export type Rank = 'Firefighter' | 'DE' | 'Lieutenant' | 'Captain' | 'Chief';
 export type Shift = 'A' | 'B' | 'C';

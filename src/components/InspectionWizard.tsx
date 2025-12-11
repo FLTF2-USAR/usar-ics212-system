@@ -44,8 +44,12 @@ export const InspectionWizard: React.FC = () => {
 
   const loadChecklistData = async (userData: User) => {
     try {
+      // Determine which checklist to load based on apparatus type
+      const isEngine = userData.apparatus.startsWith('Engine');
+      const checklistFile = isEngine ? 'engine_checklist.json' : 'rescue_checklist.json';
+      
       // Load checklist JSON
-      const response = await fetch('/mbfd-checkout-system/data/rescue_checklist.json');
+      const response = await fetch(`/mbfd-checkout-system/data/${checklistFile}`);
       const data: ChecklistData = await response.json();
       setChecklist(data);
 
@@ -264,22 +268,22 @@ export const InspectionWizard: React.FC = () => {
     : 'space-y-3';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 pb-24">
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-600 to-red-700 text-white sticky top-0 z-10 shadow-xl">
+      <div className="bg-gradient-to-r from-blue-800 via-blue-900 to-blue-800 text-white sticky top-0 z-10 shadow-2xl">
         <div className={`${containerClass} mx-auto ${device.isDesktop ? 'px-6' : 'px-4'} py-4`}>
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold">{user.apparatus}</h1>
-              <p className="text-sm text-red-100">
+              <p className="text-sm text-blue-100">
                 {user.name} • {user.rank}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-red-100">Shift {user.shift}</p>
+              <p className="text-xs text-blue-200">Shift {user.shift}</p>
               <p className="text-sm font-semibold">Unit {user.unitNumber}</p>
               {device.isDesktop && (
-                <p className="text-xs text-red-200 mt-1">🖥️ Desktop Mode</p>
+                <p className="text-xs text-blue-300 mt-1">🖥️ Desktop Mode</p>
               )}
             </div>
           </div>
@@ -294,12 +298,12 @@ export const InspectionWizard: React.FC = () => {
                     ? 'bg-green-400'
                     : idx === currentStep
                     ? 'bg-white'
-                    : 'bg-red-400'
+                    : 'bg-blue-600'
                 }`}
               />
             ))}
           </div>
-          <p className="text-xs text-red-100 mt-2 text-center font-medium">
+          <p className="text-xs text-blue-100 mt-2 text-center font-medium">
             Step {currentStep + 1} of {totalSteps}
           </p>
         </div>
@@ -308,14 +312,14 @@ export const InspectionWizard: React.FC = () => {
       {/* Daily Schedule Banner */}
       {todaySchedule && todaySchedule.tasks.length > 0 && todaySchedule.tasks[0] !== 'None' && (
         <div className={`${containerClass} mx-auto ${device.isDesktop ? 'px-6' : 'px-4'} mt-4`}>
-          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-2xl p-4">
+          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-400 rounded-2xl p-4 shadow-md">
             <div className="flex items-start gap-3">
-              <Calendar className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+              <Calendar className="w-6 h-6 text-amber-700 flex-shrink-0 mt-0.5" />
               <div>
                 <h3 className="font-bold text-amber-900 mb-1">Today's Schedule - {today}</h3>
                 <ul className="space-y-1">
                   {todaySchedule.tasks.map((task, idx) => (
-                    <li key={idx} className="text-sm text-amber-800">• {task}</li>
+                    <li key={idx} className="text-sm text-amber-800 font-medium">• {task}</li>
                   ))}
                 </ul>
               </div>
@@ -326,12 +330,12 @@ export const InspectionWizard: React.FC = () => {
 
       {/* Content */}
       <div className={`${containerClass} mx-auto ${device.isDesktop ? 'px-6' : 'px-4'} py-6`}>
-        <Card className={`shadow-2xl ${device.isDesktop ? 'rounded-none' : ''}`}>
-          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
+        <Card className={`shadow-2xl ${device.isDesktop ? 'rounded-xl' : 'rounded-2xl'}`}>
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 border-b-2 border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {isOfficerStep ? (
-                  <Shield className="w-8 h-8 text-blue-600" />
+                  <Shield className="w-8 h-8 text-blue-700" />
                 ) : (
                   <Gauge className="w-8 h-8 text-red-600" />
                 )}
@@ -339,7 +343,7 @@ export const InspectionWizard: React.FC = () => {
                   <h2 className="text-2xl font-bold text-gray-900">
                     {isOfficerStep ? 'Officer Checklist' : currentCompartment?.title}
                   </h2>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 font-medium">
                     {isOfficerStep 
                       ? 'Complete all officer-specific checks'
                       : 'Check all equipment in this compartment'
@@ -352,7 +356,7 @@ export const InspectionWizard: React.FC = () => {
               <Button
                 onClick={isOfficerStep ? handleCheckAllOfficer : handleCheckAllCompartment}
                 variant="secondary"
-                className="flex items-center gap-2 h-10 px-4 text-sm font-bold"
+                className="flex items-center gap-2 h-10 px-4 text-sm font-bold bg-blue-100 hover:bg-blue-200 text-blue-800"
               >
                 <CheckCheck className="w-5 h-5" />
                 {device.isMobile ? 'All OK' : 'Check All'}
@@ -401,13 +405,13 @@ export const InspectionWizard: React.FC = () => {
       </div>
 
       {/* Navigation Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 p-4 shadow-2xl">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-300 p-4 shadow-2xl">
         <div className={`${containerClass} mx-auto ${device.isDesktop ? 'px-6' : ''} flex gap-3`}>
           {currentStep > 0 && (
             <Button
               onClick={() => setCurrentStep(currentStep - 1)}
               variant="secondary"
-              className="flex items-center gap-2 h-14 px-6 rounded-xl font-bold"
+              className="flex items-center gap-2 h-14 px-6 rounded-xl font-bold bg-gray-100 hover:bg-gray-200 text-gray-800"
             >
               <ChevronLeft className="w-5 h-5" />
               Previous
@@ -420,7 +424,7 @@ export const InspectionWizard: React.FC = () => {
             <Button
               onClick={() => setCurrentStep(currentStep + 1)}
               disabled={!canProceed}
-              className="flex items-center gap-2 h-14 px-8 rounded-xl font-bold shadow-lg"
+              className="flex items-center gap-2 h-14 px-8 rounded-xl font-bold shadow-lg bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 disabled:from-gray-400 disabled:to-gray-500"
             >
               Next
               <ChevronRight className="w-5 h-5" />
@@ -429,7 +433,7 @@ export const InspectionWizard: React.FC = () => {
             <Button
               onClick={handleSubmit}
               disabled={!canProceed || isSubmitting}
-              className="flex items-center gap-2 h-14 px-8 rounded-xl font-bold shadow-lg bg-green-600 hover:bg-green-700"
+              className="flex items-center gap-2 h-14 px-8 rounded-xl font-bold shadow-lg bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500"
             >
               {isSubmitting ? (
                 <>
@@ -464,17 +468,17 @@ export const InspectionWizard: React.FC = () => {
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
               ✅ Inspection Submitted Successfully!
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-700 font-medium">
               Your {user?.apparatus} inspection has been recorded.
             </p>
           </div>
 
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-sm text-gray-700">
+          <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
+            <p className="text-sm text-gray-800 font-semibold">
               <strong>Defects Reported:</strong> {submissionDefectCount}
             </p>
             {submissionDefectCount > 0 && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-600 mt-1">
                 Issues have been logged and will be reviewed by maintenance.
               </p>
             )}
@@ -482,7 +486,7 @@ export const InspectionWizard: React.FC = () => {
 
           <Button
             onClick={handleSuccessModalClose}
-            className="w-full h-12 text-base font-bold rounded-xl"
+            className="w-full h-12 text-base font-bold rounded-xl bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900"
           >
             Return to Home
           </Button>
@@ -512,14 +516,14 @@ const OfficerChecklistField: React.FC<OfficerChecklistFieldProps> = ({ item, ind
 
   if (item.inputType === 'checkbox') {
     return (
-      <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border-2 border-gray-200 transition-all hover:border-blue-400">
+      <div className="flex items-center gap-3 p-4 rounded-xl bg-white border-2 border-gray-300 transition-all hover:border-blue-400 shadow-sm">
         <input
           type="checkbox"
           checked={item.checked}
           onChange={(e) => handleChange(e.target.checked)}
-          className="w-6 h-6 rounded-lg border-2 border-gray-300 text-blue-600 focus:ring-4 focus:ring-blue-400"
+          className="w-6 h-6 rounded-lg border-2 border-gray-400 text-blue-600 focus:ring-4 focus:ring-blue-400 cursor-pointer"
         />
-        <label className="flex-1 font-medium text-gray-900 cursor-pointer">
+        <label className="flex-1 font-semibold text-gray-900 cursor-pointer">
           {item.name}
         </label>
       </div>
@@ -527,17 +531,17 @@ const OfficerChecklistField: React.FC<OfficerChecklistFieldProps> = ({ item, ind
   }
 
   return (
-    <div className="p-4 rounded-xl bg-gray-50 border-2 border-gray-200 space-y-2">
+    <div className="p-4 rounded-xl bg-white border-2 border-gray-300 space-y-2 shadow-sm">
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
           checked={item.checked}
-          onChange={() => handleChange(item.checked, item.value)}
-          className="w-5 h-5 rounded border-2 border-gray-300 text-blue-600"
+          onChange={() => handleChange(!item.checked, item.value)}
+          className="w-5 h-5 rounded border-2 border-gray-400 text-blue-600 cursor-pointer"
         />
-        <label className="font-medium text-gray-900 text-sm">
+        <label className="font-semibold text-gray-900 text-sm">
           {item.name}
-          {item.required && <span className="text-red-500 ml-1">*</span>}
+          {item.required && <span className="text-red-600 ml-1">*</span>}
         </label>
       </div>
       <div className="relative">
@@ -548,7 +552,7 @@ const OfficerChecklistField: React.FC<OfficerChecklistFieldProps> = ({ item, ind
           onFocus={() => setShowSuggestions(true)}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
           placeholder={item.inputType === 'percentage' ? 'Enter %' : item.inputType === 'number' ? 'Enter number' : 'Enter value'}
-          className="w-full px-3 py-2 text-sm rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 outline-none"
+          className="w-full px-3 py-3 text-base rounded-lg border-2 border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-600 outline-none bg-white text-gray-900 font-medium"
         />
         {showSuggestions && history.length > 0 && item.inputType === 'text' && (
           <div className="absolute z-10 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-xl max-h-40 overflow-y-auto">
@@ -559,7 +563,7 @@ const OfficerChecklistField: React.FC<OfficerChecklistFieldProps> = ({ item, ind
                   handleChange(true, val);
                   setShowSuggestions(false);
                 }}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors text-gray-900 font-medium"
               >
                 {val}
               </button>

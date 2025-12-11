@@ -1,6 +1,11 @@
 export type Rank = 'Firefighter' | 'DE' | 'Lieutenant' | 'Captain' | 'Chief';
 
-export type Apparatus = 'Rescue 1' | 'Rescue 2' | 'Rescue 3' | 'Rescue 11' | 'Engine 1';
+export type Apparatus = 
+  | 'Engine 1' | 'Engine 2' | 'Engine 3' | 'Engine 4'
+  | 'Rescue 1' | 'Rescue 2' | 'Rescue 3' | 'Rescue 4'
+  | 'Rescue 11' | 'Rescue 22' | 'Rescue 44';
+
+export type Shift = 'A' | 'B' | 'C';
 
 export type ItemStatus = 'present' | 'missing' | 'damaged';
 
@@ -8,6 +13,8 @@ export interface User {
   name: string;
   rank: Rank;
   apparatus: Apparatus;
+  shift: Shift;
+  unitNumber: string;
 }
 
 export interface ChecklistItem {

@@ -46,33 +46,33 @@ export const LoginScreen: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-gray-100 flex items-center justify-center p-4">
       <Card className="max-w-md w-full shadow-2xl">
         <CardContent className="py-8 px-6">
           {/* Logo/Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-600 to-red-700 rounded-3xl mb-4 shadow-lg">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-600 to-red-700 rounded-3xl mb-4 shadow-xl">
               <Truck className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent mb-1">
               MBFD Checkout
             </h1>
-            <p className="text-sm text-gray-500 font-medium mb-1">Miami Beach Fire Department</p>
-            <p className="text-xs text-gray-400">{today}</p>
+            <p className="text-sm text-gray-600 font-semibold mb-1">Miami Beach Fire Department</p>
+            <p className="text-xs text-gray-500">{today}</p>
           </div>
 
           {/* Apparatus Display */}
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-4 mb-6 text-center">
-            <p className="text-sm text-gray-600 font-semibold mb-1">SELECTED APPARATUS</p>
-            <p className="text-3xl font-bold text-red-700">{user.apparatus.toUpperCase()}</p>
-            <p className="text-xs text-gray-500 mt-1">Daily Equipment Inspection</p>
+          <div className="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 border-2 border-red-300 rounded-2xl p-4 mb-6 text-center shadow-inner">
+            <p className="text-sm text-gray-700 font-bold mb-1">SELECTED APPARATUS</p>
+            <p className="text-3xl font-bold bg-gradient-to-r from-red-700 to-red-600 bg-clip-text text-transparent">{user.apparatus.toUpperCase()}</p>
+            <p className="text-xs text-gray-600 mt-1 font-medium">Daily Equipment Inspection</p>
           </div>
 
           {/* Form */}
           <div className="space-y-4">
             {/* Name Input */}
             <div>
-              <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-bold text-gray-800 mb-2">
                 Full Name *
               </label>
               <input
@@ -84,13 +84,13 @@ export const LoginScreen: React.FC = () => {
                   setValidationError('');
                 }}
                 placeholder="Enter your full name"
-                className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-500 outline-none transition-all text-base font-medium placeholder-gray-400"
+                className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-600 outline-none transition-all text-base font-medium placeholder-gray-400 bg-white text-gray-900"
               />
             </div>
 
             {/* Apparatus Selector */}
             <div>
-              <label htmlFor="apparatus" className="block text-sm font-bold text-gray-700 mb-2">
+              <label htmlFor="apparatus" className="block text-sm font-bold text-gray-800 mb-2">
                 Apparatus *
               </label>
               <div className="relative">
@@ -101,7 +101,7 @@ export const LoginScreen: React.FC = () => {
                     setUser({ ...user, apparatus: e.target.value as Apparatus });
                     setValidationError('');
                   }}
-                  className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-500 outline-none appearance-none bg-white transition-all text-base font-medium"
+                  className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-600 outline-none appearance-none bg-white transition-all text-base font-semibold text-gray-900"
                 >
                   {APPARATUS_LIST.map((apparatus) => (
                     <option key={apparatus} value={apparatus}>
@@ -109,7 +109,7 @@ export const LoginScreen: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
               </div>
             </div>
 
@@ -117,7 +117,7 @@ export const LoginScreen: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               {/* Rank Dropdown */}
               <div>
-                <label htmlFor="rank" className="block text-sm font-bold text-gray-700 mb-2">
+                <label htmlFor="rank" className="block text-sm font-bold text-gray-800 mb-2">
                   Rank
                 </label>
                 <div className="relative">
@@ -125,7 +125,7 @@ export const LoginScreen: React.FC = () => {
                     id="rank"
                     value={user.rank}
                     onChange={(e) => setUser({ ...user, rank: e.target.value as Rank })}
-                    className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-500 outline-none appearance-none bg-white transition-all text-base font-medium"
+                    className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-600 outline-none appearance-none bg-white transition-all text-base font-medium text-gray-900"
                   >
                     {ranks.map((rank) => (
                       <option key={rank} value={rank}>
@@ -133,13 +133,13 @@ export const LoginScreen: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
                 </div>
               </div>
 
               {/* Shift Dropdown */}
               <div>
-                <label htmlFor="shift" className="block text-sm font-bold text-gray-700 mb-2">
+                <label htmlFor="shift" className="block text-sm font-bold text-gray-800 mb-2">
                   Shift
                 </label>
                 <div className="relative">
@@ -147,7 +147,7 @@ export const LoginScreen: React.FC = () => {
                     id="shift"
                     value={user.shift}
                     onChange={(e) => setUser({ ...user, shift: e.target.value as Shift })}
-                    className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-500 outline-none appearance-none bg-white transition-all text-base font-medium"
+                    className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-600 outline-none appearance-none bg-white transition-all text-base font-medium text-gray-900"
                   >
                     {shifts.map((shift) => (
                       <option key={shift} value={shift}>
@@ -155,14 +155,14 @@ export const LoginScreen: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
                 </div>
               </div>
             </div>
 
             {/* Unit/Vehicle Number */}
             <div>
-              <label htmlFor="unitNumber" className="block text-sm font-bold text-gray-700 mb-2">
+              <label htmlFor="unitNumber" className="block text-sm font-bold text-gray-800 mb-2">
                 Unit/Vehicle # *
               </label>
               <input
@@ -174,21 +174,21 @@ export const LoginScreen: React.FC = () => {
                   setValidationError('');
                 }}
                 placeholder="e.g., R1, E1, R11"
-                className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-500 outline-none transition-all text-base font-medium placeholder-gray-400"
+                className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-600 outline-none transition-all text-base font-medium placeholder-gray-400 bg-white text-gray-900"
               />
             </div>
 
             {/* Validation Error */}
             {validationError && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3">
-                <p className="text-sm text-red-700 font-semibold">⚠️ {validationError}</p>
+              <div className="bg-red-50 border-2 border-red-300 rounded-xl p-3 shadow-sm">
+                <p className="text-sm text-red-800 font-semibold">⚠️ {validationError}</p>
               </div>
             )}
 
             {/* Start Button */}
             <Button
               onClick={handleStartInspection}
-              className="w-full mt-6 h-14 text-lg font-bold shadow-xl hover:shadow-2xl transition-all rounded-xl"
+              className="w-full mt-6 h-14 text-lg font-bold shadow-xl hover:shadow-2xl transition-all rounded-xl bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900"
               size="lg"
             >
               Start Inspection →
@@ -198,7 +198,7 @@ export const LoginScreen: React.FC = () => {
             <div className="text-center mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={() => navigate('/admin')}
-                className="text-sm text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                className="text-sm text-blue-700 hover:text-blue-800 font-semibold transition-colors"
               >
                 Admin Dashboard →
               </button>
@@ -209,8 +209,8 @@ export const LoginScreen: React.FC = () => {
 
       {/* MBFD Badge at bottom */}
       <div className="fixed bottom-4 left-0 right-0 text-center">
-        <p className="text-white text-xs font-medium opacity-80">
-          Miami Beach Fire Department • Rescue 1
+        <p className="text-gray-700 text-xs font-semibold opacity-90 bg-white/50 backdrop-blur-sm py-2 px-4 rounded-full inline-block shadow-sm">
+          Miami Beach Fire Department
         </p>
       </div>
     </div>
