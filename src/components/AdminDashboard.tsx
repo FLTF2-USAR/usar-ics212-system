@@ -125,7 +125,7 @@ export const AdminDashboard: React.FC = () => {
     setIsResolving(true);
     try {
       await githubService.resolveDefect(
-        selectedDefect.issueNumber,
+        selectedDefect.issueNumber!,
         resolutionNote,
         'Admin'
       );
@@ -602,7 +602,7 @@ export const AdminDashboard: React.FC = () => {
                           </div>
                           <div className="space-y-2">
                             <p className="text-sm text-gray-700">
-                              <strong>Reported missing {item.occurrences} time{item.occurrences !== 1 ? 's' : ''}</strong> in the last 30 days
+                              <strong>Reported missing {item.occurrences} time{(item.occurrences !== 1 ? 's' : '')}</strong> in the last 30 days
                             </p>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-semibold text-gray-700">Affected apparatus:</span>
