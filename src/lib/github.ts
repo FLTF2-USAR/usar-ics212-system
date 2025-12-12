@@ -250,7 +250,33 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
     const { user, apparatus, date, items } = submission;
     
     const title = `[${apparatus}] Daily Inspection - ${date}`;
-    const body = `
+    
+    // Try to create a hosted receipt
+    let receiptURL: string | null = null;
+    let fallbackMarkdown = '';
+    
+    try {
+      // Import receipt helpers dynamically to avoid circular deps
+      const { buildReceiptPayloadFromInspection, createHostedReceipt, buildReceiptMarkdown } = await import('./receipt');
+      const receiptPayload = buildReceiptPayloadFromInspection(submission);
+      
+      // Attempt to create hosted receipt
+      try {
+        const response = await createHostedReceipt(API_BASE_URL, receiptPayload, this.adminPassword || undefined);
+        receiptURL = response.url;
+        console.log(`Created hosted receipt: ${receiptURL}`);
+      } catch (receiptError) {
+        console.error('Failed to create hosted receipt, using fallback:', receiptError);
+        // Build fallback markdown
+        fallbackMarkdown = buildReceiptMarkdown(receiptPayload);
+      }
+    } catch (error) {
+      console.error('Receipt module import failed:', error);
+      // Continue without receipt
+    }
+    
+    // Build issue body with receipt link or embedded markdown
+    let body = `
 ## Daily Inspection Log
 
 **Apparatus:** ${apparatus}
@@ -265,10 +291,19 @@ ${submission.defects.length > 0 ? `
 ### Issues Reported
 ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}`
  : '✅ All items present and working'}
+`;
 
----
-*This inspection log was automatically created by the MBFD Checkout System.*
-`.trim();
+    // Add receipt link or fallback markdown
+    if (receiptURL) {
+      body += `\n\n---\n\n📋 **[View Full Printable Receipt](${receiptURL})**\n\n_This receipt contains the complete inspection details in a print-friendly format._\n`;
+    } else if (fallbackMarkdown) {
+      body += `\n\n---\n\n${fallbackMarkdown}\n`;
+    }
+    
+    body += `\n---
+*This inspection log was automatically created by the MBFD Checkout System.*`;
+
+    body = body.trim();
 
     try {
       const response = await fetch(`${API_BASE_URL}/issues`, {
