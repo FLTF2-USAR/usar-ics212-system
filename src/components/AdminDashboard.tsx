@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain } from 'lucide-react';
+import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
 import { AIFleetInsights } from './AIFleetInsights';
+import { InventoryTab } from './inventory/InventoryTab';
 import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
 import { APPARATUS_LIST } from '../lib/config';
 import type { Defect, EmailConfig } from '../types';
 
-type TabType = 'fleet' | 'activity' | 'supplies' | 'notifications' | 'insights';
+type TabType = 'fleet' | 'activity' | 'supplies' | 'inventory' | 'notifications' | 'insights';
 
 interface DailySubmissions {
   today: string[];
@@ -326,33 +327,27 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex gap-2 border-b border-gray-200">
             <button
               onClick={() => setActiveTab('fleet')}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'fleet'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'fleet'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'}`}
             >
               <Truck className="w-5 h-5" />
               Fleet Status
             </button>
             <button
               onClick={() => setActiveTab('activity')}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'activity'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'activity'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'}`}
             >
               <Calendar className="w-5 h-5" />
               Daily Activity
             </button>
             <button
               onClick={() => setActiveTab('supplies')}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'supplies'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'supplies'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'}`}
             >
               <Package className="w-5 h-5" />
               Supply Alerts
@@ -363,15 +358,22 @@ export const AdminDashboard: React.FC = () => {
               )}
             </button>
             <button
+              onClick={() => setActiveTab('inventory')}
+              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'inventory'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              <Warehouse className="w-5 h-5" />
+              Inventory
+            </button>
+            <button
               onClick={() => {
                 setActiveTab('notifications');
                 if (!emailConfig) loadEmailConfig();
               }}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'notifications'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'notifications'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'}`}
             >
               <Mail className="w-5 h-5" />
               Notifications
@@ -381,11 +383,9 @@ export const AdminDashboard: React.FC = () => {
                 setActiveTab('insights');
                 setCriticalAlertsCount(0); // Clear badge when viewing
               }}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 relative ${
-                activeTab === 'insights'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 relative ${activeTab === 'insights'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'}`}
             >
               <Brain className="w-5 h-5" />
               Fleet Insights
@@ -407,7 +407,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Fleet Status</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {apparatusList.map((apparatus) => {
+                {apparatusList.map(apparatus => {
                   const defectCount = fleetStatus.get(apparatus) || 0;
                   const isOk = defectCount === 0;
 
@@ -449,7 +449,7 @@ export const AdminDashboard: React.FC = () => {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {defects.map((defect) => (
+                  {defects.map(defect => (
                     <Card key={`${defect.apparatus}-${defect.item}`} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between">
@@ -510,7 +510,7 @@ export const AdminDashboard: React.FC = () => {
                 <CardContent className="p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Today's Submissions</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {apparatusList.map((apparatus) => {
+                    {apparatusList.map(apparatus => {
                       const hasSubmitted = dailySubmissions?.today.includes(apparatus) || false;
                       return (
                         <div
@@ -548,7 +548,7 @@ export const AdminDashboard: React.FC = () => {
                     Submission Statistics (Last 30 Days)
                   </h3>
                   <div className="space-y-3">
-                    {apparatusList.map((apparatus) => {
+                    {apparatusList.map(apparatus => {
                       const total = dailySubmissions?.totals.get(apparatus) || 0;
                       const lastDate = dailySubmissions?.lastSubmission.get(apparatus);
                       const percentage = Math.round((total / 30) * 100);
@@ -629,7 +629,7 @@ export const AdminDashboard: React.FC = () => {
                             </p>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-semibold text-gray-700">Affected apparatus:</span>
-                              {item.apparatus.map((apparatus) => (
+                              {item.apparatus.map(apparatus => (
                                 <span
                                   key={apparatus}
                                   className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs font-semibold"
@@ -652,6 +652,11 @@ export const AdminDashboard: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Inventory Tab */}
+        {activeTab === 'inventory' && (
+          <InventoryTab />
         )}
 
         {/* Fleet Insights Tab */}
@@ -724,7 +729,7 @@ export const AdminDashboard: React.FC = () => {
                           name="email_mode"
                           value="daily_digest"
                           checked={emailConfig.email_mode === 'daily_digest'}
-                          onChange={(e) => saveEmailConfig({ email_mode: e.target.value as any })}
+                          onChange={e => saveEmailConfig({ email_mode: e.target.value as any })}
                           className="mt-1 w-5 h-5 text-blue-600"
                         />
                         <div>
@@ -738,7 +743,7 @@ export const AdminDashboard: React.FC = () => {
                           name="email_mode"
                           value="per_submission"
                           checked={emailConfig.email_mode === 'per_submission'}
-                          onChange={(e) => saveEmailConfig({ email_mode: e.target.value as any })}
+                          onChange={e => saveEmailConfig({ email_mode: e.target.value as any })}
                           className="mt-1 w-5 h-5 text-blue-600"
                         />
                         <div>
@@ -752,7 +757,7 @@ export const AdminDashboard: React.FC = () => {
                           name="email_mode"
                           value="hybrid"
                           checked={emailConfig.email_mode === 'hybrid'}
-                          onChange={(e) => saveEmailConfig({ email_mode: e.target.value as any })}
+                          onChange={e => saveEmailConfig({ email_mode: e.target.value as any })}
                           className="mt-1 w-5 h-5 text-blue-600"
                         />
                         <div>
@@ -774,7 +779,7 @@ export const AdminDashboard: React.FC = () => {
                           <input
                             type="email"
                             value={email}
-                            onChange={(e) => {
+                            onChange={e => {
                               const newRecipients = [...emailConfig.recipients];
                               newRecipients[idx] = e.target.value;
                               setEmailConfig({ ...emailConfig, recipients: newRecipients });
@@ -822,7 +827,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={emailConfig.enable_immediate_for_critical}
-                        onChange={(e) => saveEmailConfig({ enable_immediate_for_critical: e.target.checked })}
+                        onChange={e => saveEmailConfig({ enable_immediate_for_critical: e.target.checked })}
                         className="mt-1 w-5 h-5 text-blue-600 rounded"
                       />
                       <div>
@@ -843,7 +848,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="number"
                         value={emailConfig.daily_email_hard_cap}
-                        onChange={(e) => setEmailConfig({ ...emailConfig, daily_email_hard_cap: parseInt(e.target.value) || 250 })}
+                        onChange={e => setEmailConfig({ ...emailConfig, daily_email_hard_cap: parseInt(e.target.value) || 250 })}
                         className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         min="1"
                         max="500"
@@ -870,7 +875,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="text"
                         value={emailConfig.email_subject_template}
-                        onChange={(e) => setEmailConfig({ ...emailConfig, email_subject_template: e.target.value })}
+                        onChange={e => setEmailConfig({ ...emailConfig, email_subject_template: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="MBFD Daily Inspection Summary - {date}"
                       />
@@ -932,7 +937,7 @@ export const AdminDashboard: React.FC = () => {
               </label>
               <textarea
                 value={resolutionNote}
-                onChange={(e) => setResolutionNote(e.target.value)}
+                onChange={e => setResolutionNote(e.target.value)}
                 placeholder="Describe how this was resolved (e.g., 'Replaced with spare', 'Item found and returned', 'Repaired by maintenance')"
                 rows={4}
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
