@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
-import { Modal } from './ui/Modal';
 import { AIFleetInsights } from './AIFleetInsights';
 import { InventoryTab } from './inventory/InventoryTab';
 import { githubService } from '../lib/github';
@@ -37,10 +36,6 @@ export const AdminDashboard: React.FC = () => {
   const [dailySubmissions, setDailySubmissions] = useState<DailySubmissions | null>(null);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDefect, setSelectedDefect] = useState<Defect | null>(null);
-  const [resolutionNote, setResolutionNote] = useState('');
-  const [isResolving, setIsResolving] = useState(false);
-  const [showResolveSuccess, setShowResolveSuccess] = useState(false);
 
   // Email notification state
   const [emailConfig, setEmailConfig] = useState<EmailConfig | null>(null);
@@ -51,27 +46,18 @@ export const AdminDashboard: React.FC = () => {
   // AI Insights state
   const [criticalAlertsCount, setCriticalAlertsCount] = useState(0);
 
-  // Vehicle inspection history state
-  const [selectedApparatus, setSelectedApparatus] = useState<string | null>(null);
-  const [apparatusLogs, setApparatusLogs] = useState<any[]>([]);
-  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-
   // Photo lightbox state
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
 
   const loadApparatusLogs = async (apparatus: string) => {
-    setIsLoadingLogs(true);
     try {
       const logs = await githubService.getInspectionLogs(30); // Last 30 days
       // Filter logs for this apparatus
       const filteredLogs = logs.filter(log => log.title.includes(`[${apparatus}]`));
-      setApparatusLogs(filteredLogs);
-      setSelectedApparatus(apparatus);
+      console.log('Loaded inspection logs:', filteredLogs);
     } catch (error) {
       console.error('Error loading apparatus logs:', error);
       alert('Failed to load inspection history');
-    } finally {
-      setIsLoadingLogs(false);
     }
   };
 
@@ -141,48 +127,6 @@ export const AdminDashboard: React.FC = () => {
       }
       githubService.clearAdminPassword();
       localStorage.removeItem('adminPassword');
-    }
-  };
-
-  const handleResolve = async () => {
-    if (!selectedDefect || !resolutionNote.trim()) {
-      alert('Please enter resolution notes');
-      return;
-    }
-
-    if (!selectedDefect.issueNumber) {
-      alert('Unable to resolve: Issue number not found');
-      return;
-    }
-
-    setIsResolving(true);
-    try {
-      await githubService.resolveDefect(
-        selectedDefect.issueNumber!,
-        resolutionNote,
-        'Admin'
-      );
-      
-      // Refresh data
-      await loadDashboardData();
-      
-      setSelectedDefect(null);
-      setResolutionNote('');
-      
-      // Show success toast
-      setShowResolveSuccess(true);
-      setTimeout(() => setShowResolveSuccess(false), 3000);
-    } catch (error) {
-      console.error('Error resolving defect:', error);
-      if ((error as Error).message.includes('Unauthorized')) {
-        alert('Session expired. Please re-enter the admin password.');
-        setIsAuthenticated(false);
-        githubService.clearAdminPassword();
-      } else {
-        alert('Error resolving defect. Please try again.');
-      }
-    } finally {
-      setIsResolving(false);
     }
   };
 
@@ -325,14 +269,6 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Success Toast */}
-      {showResolveSuccess && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
-          <CheckCircle className="w-5 h-5" />
-          <span className="font-semibold">Defect resolved successfully!</span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
@@ -524,14 +460,7 @@ export const AdminDashboard: React.FC = () => {
                               </div>
                             )}
                           </div>
-                          <Button
-                            onClick={() => setSelectedDefect(defect)}
-                            variant="primary"
-                            size="sm"
-                            className="mt-3 md:mt-0 md:ml-4"
-                          >
-                            Resolve
-                          </Button>
+
                         </div>
                       </CardContent>
                     </Card>
