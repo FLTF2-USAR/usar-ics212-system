@@ -62,12 +62,13 @@ export const AIFleetInsights: React.FC<AIFleetInsightsProps> = ({ adminPassword,
     }
   };
 
-  // Auto-load insights on mount and when filters change
-  useEffect(() => {
-    if (adminPassword) {
-      loadAIInsights();
-    }
-  }, [selectedTimeframe, selectedApparatus, adminPassword]);
+  // REMOVED: Auto-load on mount/filters to prevent continuous loop
+  // AI analysis now requires explicit user button click
+  // useEffect(() => {
+  //   if (adminPassword) {
+  //     loadAIInsights();
+  //   }
+  // }, [selectedTimeframe, selectedApparatus, adminPassword]);
 
   const renderInsightCard = (insight: string, index: number) => {
     const isCritical = insight.toLowerCase().includes('critical') || insight.toLowerCase().includes('urgent');
