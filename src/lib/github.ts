@@ -436,6 +436,16 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
       status = statusStr.toLowerCase() as 'missing' | 'damaged';
     }
 
+    // Extract photo URL from issue body if present
+    let photoUrl: string | undefined;
+    if (issue.body) {
+      // Look for markdown image syntax: ![alt](url)
+      const photoMatch = issue.body.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/);
+      if (photoMatch) {
+        photoUrl = photoMatch[1];
+      }
+    }
+
     return {
       issueNumber: issue.number,
       apparatus,
@@ -447,6 +457,7 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
       reportedAt: issue.created_at,
       updatedAt: issue.updated_at,
       resolved: false,
+      photoUrl,
     };
   }
 
