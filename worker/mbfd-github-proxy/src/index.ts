@@ -236,6 +236,63 @@ async function handleIssuesRequest(
       return cacheableResponse;
     }
 
+    // Get single issue - with caching
+    if (request.method === 'GET' && path.match(/^\/\d+$/)) {
+      const issueNumber = path.substring(1);
+      
+      // Try to get from cache first
+      const cache = caches.default;
+      const cacheKey = new Request(url.toString(), request);
+      let response = await cache.match(cacheKey);
+
+      if (response) {
+        console.log(`Cache HIT for issue #${issueNumber}`);
+        return addCorsHeaders(response);
+      }
+
+      console.log(`Cache MISS for issue #${issueNumber}`);
+      
+      const githubUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issueNumber}`;
+      
+      response = await fetch(githubUrl, {
+        headers: {
+          'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'MBFD-Checkout-System',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData: any = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('GitHub API Error fetching issue:', issueNumber, response.status, errorData);
+        return jsonResponse(
+          { 
+            error: 'GitHub API Error',
+            status: response.status,
+            message: errorData.message || response.statusText,
+            details: errorData
+          },
+          { status: response.status }
+        );
+      }
+
+      const data = await response.json();
+      
+      // Create cacheable response
+      const cacheableResponse = jsonResponse(data, {
+        headers: {
+          'Cache-Control': `public, max-age=${CACHE_TTL.ISSUE_DETAIL}`,
+        }
+      });
+
+      // Store in cache (don't await to avoid blocking)
+      cache.put(cacheKey, cacheableResponse.clone()).catch(err => {
+        console.error('Cache put failed:', err);
+      });
+
+      return cacheableResponse;
+    }
+
     // Create issue (no caching for POST)
     if (request.method === 'POST' && path === '') {
       const body = await request.json();
