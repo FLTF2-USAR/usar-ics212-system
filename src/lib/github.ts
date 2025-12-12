@@ -153,6 +153,16 @@ class GitHubService {
 
     // Create a log entry (closed issue) for the completed inspection
     await this.createLogEntry(submission);
+
+    // After successful submission, trigger inventory cross-matching
+    if (defects.length > 0) {
+      try {
+        await this.createSupplyTasksForDefects(defects, apparatus);
+      } catch (error) {
+        console.error('Failed to create supply tasks (non-fatal):', error);
+        // Don't throw - defects were submitted successfully
+      }
+    }
   }
 
   /**
@@ -307,7 +317,7 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
 
 ${submission.defects.length > 0 ? `
 ### Issues Reported
-${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}}`
+${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}`
  : '✅ All items present and working'}
 `;
 
@@ -856,6 +866,32 @@ ${resolutionNote}
     }
 
     return response.json();
+  }
+
+  /**
+   * Create supply tasks for reported defects by cross-matching with inventory
+   */
+  private async createSupplyTasksForDefects(
+    defects: Array<{ compartment: string; item: string; status: 'missing' | 'damaged' }>,
+    apparatus: string
+  ): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks/create`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ defects, apparatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create supply tasks: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log(`Created ${result.tasksCreated || 0} supply tasks from ${defects.length} defects`);
+    } catch (error) {
+      console.error('Error creating supply tasks:', error);
+      throw error;
+    }
   }
 }
 
