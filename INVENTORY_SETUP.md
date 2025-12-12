@@ -226,6 +226,133 @@ Directly adjusts inventory quantity.
 - **Auth**: Admin password required
 - **Body**: `{ itemId, delta, reason, performedBy }`
 
+## Receipt Hosting
+
+The system includes hosted receipt generation for inspection logs. When an inspection is completed, a print-friendly receipt is automatically generated, stored in Cloudflare KV, and linked in the GitHub issue.
+
+### Environment Variables
+
+Add these to your Cloudflare Worker:
+
+```bash
+# Set the worker's public hostname (used for generating receipt URLs)
+echo 'https://mbfd-github-proxy.pdarleyjr.workers.dev' | npx wrangler secret put MBFD_HOSTNAME
+
+# Set receipt expiration (optional, defaults to 90 days)
+echo '90' | npx wrangler secret put RECEIPT_TTL_DAYS
+```
+
+### Endpoints
+
+#### POST /api/receipts
+Creates a new hosted receipt and stores it in KV.
+- **Auth**: Admin password required
+- **Method**: POST
+- **Headers**: 
+  - `Content-Type: application/json`
+  - `X-Admin-Password: <admin_password>`
+- **Body**:
+  ```json
+  {
+    "inspector": "John Doe (Captain)",
+    "apparatus": "Rescue 1",
+    "date": "2025-12-12T20:00:00.000Z",
+    "items": [
+      {
+        "compartment": "Left Side #1",
+        "itemName": "Halligan Bar",
+        "status": "present",
+        "notes": ""
+      },
+      {
+        "compartment": "Rear",
+        "itemName": "First Aid Kit",
+        "status": "missing",
+        "notes": "Could not locate"
+      }
+    ],
+    "summary": {
+      "totalItems": 45,
+      "issuesFound": 1
+    }
+  }
+  ```
+- **Response (201)**:
+  ```json
+  {
+    "ok": true,
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "url": "https://mbfd-github-proxy.pdarleyjr.workers.dev/receipts/550e8400-e29b-41d4-a716-446655440000"
+  }
+  ```
+
+#### GET /receipts/:id
+Retrieves a hosted receipt HTML page.
+- **Auth**: None required (public URL, but unguessable UUID)
+- **Method**: GET
+- **Response**: HTML page (print-friendly)
+- **Cache**: 1 hour public cache
+- **TTL**: Receipts expire after configured days (default 90)
+
+### Example: Create Receipt
+
+```bash
+curl -X POST 'https://mbfd-github-proxy.pdarleyjr.workers.dev/api/receipts' \
+  -H 'Content-Type: application/json' \
+  -H 'X-Admin-Password: YOUR_ADMIN_PASSWORD' \
+  -d '{
+    "inspector": "Test User (Firefighter)",
+    "apparatus": "Engine 1",
+    "date": "2025-12-12T20:02:35.148Z",
+    "items": [
+      {
+        "compartment": "Front",
+        "itemName": "Halligan Bar",
+        "status": "present",
+        "notes": ""
+      }
+    ],
+    "summary": {
+      "totalItems": 1,
+      "issuesFound": 0
+    }
+  }'
+```
+
+### Example: View Receipt
+
+```bash
+# Returns HTML page
+curl 'https://mbfd-github-proxy.pdarleyjr.workers.dev/receipts/550e8400-e29b-41d4-a716-446655440000'
+```
+
+Or visit the URL in a browser for the full print-friendly receipt.
+
+### Features
+
+- **Automatic Generation**: Receipts are automatically created when inspections are submitted
+- **Print-Friendly**: Optimized CSS for printing with proper page breaks
+- **Mobile-Friendly**: Responsive design works on all devices
+- **Secure Storage**: Stored in Cloudflare KV with automatic expiration
+- **Fallback**: If receipt creation fails, a markdown version is embedded in the GitHub issue
+- **Admin UI**: Receipt links appear in the admin dashboard inspection history
+
+### KV Storage
+
+Receipts are stored in the `MBFD_CONFIG` KV namespace with:
+- **Key Format**: `receipt:<uuid>`
+- **Value**: Complete HTML page
+- **TTL**: Configurable via `RECEIPT_TTL_DAYS` (default 90 days)
+- **After Expiration**: Receipts are automatically purged from KV
+
+### Security Notes
+
+1. **POST endpoint** requires admin password authentication
+2. **GET endpoint** is public but uses unguessable UUIDs (v4)
+3. **HTML escaping** prevents XSS attacks in user-provided data
+4. **No sensitive data** in receipts (only inspection results)
+5. **Automatic expiration** prevents indefinite data retention
+
 ## Next Steps
 
 1. Complete Google Service Account setup (Steps 1-5 above)
