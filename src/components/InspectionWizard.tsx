@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
 import { InspectionCard } from './InspectionCard';
 import { githubService } from '../lib/github';
+import { createTasks } from '../lib/inventory';
 import { useDeviceDetection } from '../hooks/useDeviceDetection';
 import { useLocalStorage, useFieldHistory } from '../hooks/useLocalStorage';
 import type { User, ChecklistData, ChecklistItem, GitHubIssue, ItemStatus, OfficerChecklistItem } from '../types';
@@ -265,6 +266,26 @@ export const InspectionWizard: React.FC = () => {
       } catch (notifyError) {
         // Log but don't fail the entire submission if notification fails
         console.error('Failed to send notification (non-critical):', notifyError);
+      }
+
+      // Auto-create supply tasks for defects (non-blocking)
+      if (defects.length > 0) {
+        try {
+          const tasks = defects.map(defect => ({
+            apparatus: user.apparatus,
+            compartment: defect.compartment,
+            item: defect.item,
+            deficiencyType: defect.status,
+            createdBy: user.name,
+            notes: defect.notes || undefined,
+          }));
+
+          await createTasks(tasks);
+          console.log(`Successfully created ${tasks.length} supply task(s)`);
+        } catch (taskError) {
+          // Log but don't fail the entire submission if task creation fails
+          console.error('Failed to create supply tasks (non-critical):', taskError);
+        }
       }
 
       // Clear session and show success modal
@@ -691,7 +712,7 @@ const OfficerChecklistField: React.FC<OfficerChecklistFieldProps> = ({ item, ind
         <input
           type="checkbox"
           checked={item.checked}
-          onChange={() => handleChange(!item.checked, item.value)}
+          onChange={() => handleChange(item.checked, item.value)}
           className="w-5 h-5 rounded border-2 border-gray-400 text-blue-600 cursor-pointer"
         />
         <label className="font-semibold text-gray-900 text-sm">
