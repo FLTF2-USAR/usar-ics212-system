@@ -59,7 +59,7 @@ export async function handleGetInventory(
     }
 
     // Read inventory from Google Sheet
-    // Assuming the sheet has columns: Shelf, Row, Equipment Type, Equipment Name, Quantity, Manufacturer, Location, Description, Min Qty
+    // Sheet columns: Shelves (A), Rows (B), Equipment Type (C), Equipment Quantity (D), Manufacturer (E), Location (F), Description (G/H)
     const values = await readSheet(env, env.GOOGLE_SHEET_ID, 'Sheet1!A2:H1000');
 
     // Transform sheet data into inventory items
@@ -68,11 +68,11 @@ export async function handleGetInventory(
       shelf: row[0] || '',
       row: parseInt(row[1] || '0', 10),
       equipmentType: row[2] || '',
-      equipmentName: row[3] || '',
-      quantity: parseInt(row[4] || '0', 10),
-      manufacturer: row[5] || undefined,
-      location: row[6] || 'Supply Closet',
-      description: row[7] || undefined,
+      equipmentName: row[2] || '',
+      quantity: parseInt(row[3] || '0', 10),  // Equipment Quantity in column D (index 3)
+      manufacturer: row[4] || undefined,       // Manufacturer in column E (index 4)
+      location: row[5] || 'Supply Closet',     // Location in column F (index 5)
+      description: row[6] || row[7] || undefined, // Description in column G or H
       minQty: undefined, // Not available in current sheet structure
     }));
 
@@ -170,11 +170,11 @@ export async function handleAdjustInventory(
 
     const rowNumber = parseInt(rowMatch[1], 10) + 1; // +1 for header row, +1 for 0-index
 
-    // Read current quantity
+    // Read current quantity from column D
     const values = await readSheet(
       env,
       env.GOOGLE_SHEET_ID,
-      `Sheet1!E${rowNumber}`
+      `Sheet1!D${rowNumber}`
     );
 
     if (!values || values.length === 0) {
@@ -209,11 +209,11 @@ export async function handleAdjustInventory(
       );
     }
 
-    // Update quantity in sheet
+    // Update quantity in column D
     await writeSheet(
       env,
       env.GOOGLE_SHEET_ID,
-      `Sheet1!E${rowNumber}`,
+      `Sheet1!D${rowNumber}`,
       [[newQty]]
     );
 
