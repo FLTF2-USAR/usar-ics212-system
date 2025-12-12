@@ -51,11 +51,11 @@ export const LoginScreen: React.FC = () => {
         <CardContent className="py-8 px-6">
           {/* Logo/Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-4 shadow-xl overflow-hidden bg-transparent">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-4 shadow-xl overflow-hidden bg-white">
               <img 
-                src="/mbfd-checkout-system/mbfd_logo.png" 
+                src="/mbfd-checkout-system/mbfd_logo.jpg" 
                 alt="MBFD Logo" 
-                className="w-full h-full object-contain"
+                className="w-10 h-10 object-contain"
               />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent mb-1">
