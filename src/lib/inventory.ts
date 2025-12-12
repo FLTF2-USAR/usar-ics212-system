@@ -1,0 +1,196 @@
+/**
+ * Inventory API Client
+ * 
+ * This module provides functions to interact with the inventory and task management endpoints.
+ */
+
+import { getHeaders } from './github';
+
+const API_BASE = 'https://mbfd-github-proxy.pdarleyjr.workers.dev/api';
+
+export interface InventoryItem {
+  id: string;
+  shelf: string;
+  row: number;
+  equipmentType: string;
+  equipmentName: string;
+  quantity: number;
+  manufacturer?: string;
+  location: string;
+  description?: string;
+  minQty?: number;
+}
+
+export interface SuggestedReplacement {
+  itemId: string;
+  itemName: string;
+  qtyOnHand: number;
+  location?: string;
+  confidence?: number;
+}
+
+export interface SupplyTask {
+  id: string;
+  apparatus: string;
+  compartment?: string;
+  itemName: string;
+  itemId?: string;
+  deficiencyType: 'missing' | 'damaged';
+  suggestedReplacements?: SuggestedReplacement[];
+  chosenReplacement?: {
+    itemId: string;
+    itemName: string;
+    qty: number;
+  } | null;
+  qtyToTransfer?: number;
+  status: 'pending' | 'completed' | 'canceled';
+  createdBy: string;
+  createdAt: string;
+  completedBy?: string;
+  completedAt?: string;
+  notes?: string;
+}
+
+/**
+ * Fetch inventory items from the server
+ */
+export async function fetchInventory(): Promise<{
+  items: InventoryItem[];
+  fetchedAt: string;
+  source: string;
+}> {
+  const response = await fetch(`${API_BASE}/inventory`, {
+    method: 'GET',
+    headers: getHeaders(true), // Admin auth required
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to fetch inventory: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Fetch supply tasks
+ */
+export async function fetchTasks(status: 'pending' | 'completed' | 'canceled' = 'pending'): Promise<{
+  tasks: SupplyTask[];
+  count: number;
+}> {
+  const response = await fetch(`${API_BASE}/tasks?status=${status}`, {
+    method: 'GET',
+    headers: getHeaders(true), // Admin auth required
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to fetch tasks: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Create new supply tasks
+ */
+export async function createTasks(tasks: Array<{
+  apparatus: string;
+  compartment?: string;
+  item: string;
+  deficiencyType: 'missing' | 'damaged';
+  createdBy?: string;
+  notes?: string;
+}>): Promise<{
+  success: boolean;
+  tasks: SupplyTask[];
+}> {
+  const response = await fetch(`${API_BASE}/tasks`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getHeaders(false), // No admin auth needed for automatic task creation
+    },
+    body: JSON.stringify({ tasks }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to create tasks: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Update a task (mark complete, cancel, etc.)
+ */
+export async function updateTask(
+  taskId: string,
+  update: {
+    status?: 'pending' | 'completed' | 'canceled';
+    chosenReplacement?: {
+      itemId: string;
+      itemName: string;
+      qty: number;
+    };
+    completedBy?: string;
+    notes?: string;
+  }
+): Promise<{
+  success: boolean;
+  task: SupplyTask;
+}> {
+  const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getHeaders(true), // Admin auth required
+    },
+    body: JSON.stringify(update),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to update task: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Adjust inventory quantity
+ */
+export async function adjustInventory(
+  itemId: string,
+  delta: number,
+  reason?: string,
+  performedBy?: string
+): Promise<{
+  success: boolean;
+  itemId: string;
+  previousQty: number;
+  newQty: number;
+}> {
+  const response = await fetch(`${API_BASE}/inventory/adjust`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getHeaders(true), // Admin auth required
+    },
+    body: JSON.stringify({
+      itemId,
+      delta,
+      reason,
+      performedBy,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || error.details || `Failed to adjust inventory: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
