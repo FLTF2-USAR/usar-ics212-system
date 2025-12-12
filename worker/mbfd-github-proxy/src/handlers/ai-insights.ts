@@ -5,11 +5,7 @@
  * Uses async processing to avoid blocking requests
  */
 
-interface Env {
-  AI?: Ai;
-  SUPPLY_DB: D1Database;
-  ADMIN_PASSWORD: string;
-}
+import type { Env } from '../index';
 
 interface AIInsightRequest {
   tasks?: Array<{
@@ -88,7 +84,7 @@ export async function handleAIInsights(
 
 async function generateInsights(env: Env, data: AIInsightRequest): Promise<void> {
   try {
-    if (!env.AI) return;
+    if (!env.AI || !env.SUPPLY_DB) return;
 
     const insightId = crypto.randomUUID();
     const createdAt = new Date().toISOString();
@@ -159,19 +155,21 @@ async function generateInsights(env: Env, data: AIInsightRequest): Promise<void>
     }
 
     // Store insight in D1
-    await env.SUPPLY_DB.prepare(
-      `INSERT INTO inventory_insights (id, apparatus, insight_json, created_at, model, status)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        insightId,
-        'fleet-wide',
-        insightJson,
-        createdAt,
-        '@cf/meta/llama-2-7b-chat-int8',
-        'success'
+    if (env.SUPPLY_DB) {
+      await env.SUPPLY_DB.prepare(
+        `INSERT INTO inventory_insights (id, apparatus, insight_json, created_at, model, status)
+         VALUES (?, ?, ?, ?, ?, ?)`
       )
-      .run();
+        .bind(
+          insightId,
+          'fleet-wide',
+          insightJson,
+          createdAt,
+          '@cf/meta/llama-2-7b-chat-int8',
+          'success'
+        )
+        .run();
+    }
 
     console.log('AI insights generated and stored:', insightId);
   } catch (error) {
@@ -179,18 +177,20 @@ async function generateInsights(env: Env, data: AIInsightRequest): Promise<void>
 
     // Store error status
     try {
-      await env.SUPPLY_DB.prepare(
-        `INSERT INTO inventory_insights (id, apparatus, insight_json, created_at, status)
-         VALUES (?, ?, ?, ?, ?)`
-      )
-        .bind(
-          crypto.randomUUID(),
-          'fleet-wide',
-          JSON.stringify({ error: String(error) }),
-          new Date().toISOString(),
-          'error'
+      if (env.SUPPLY_DB) {
+        await env.SUPPLY_DB.prepare(
+          `INSERT INTO inventory_insights (id, apparatus, insight_json, created_at, status)
+           VALUES (?, ?, ?, ?, ?)`
         )
-        .run();
+          .bind(
+            crypto.randomUUID(),
+            'fleet-wide',
+            JSON.stringify({ error: String(error) }),
+            new Date().toISOString(),
+            'error'
+          )
+          .run();
+      }
     } catch (dbError) {
       console.error('Failed to store error status:', dbError);
     }
@@ -212,6 +212,16 @@ export async function handleGetInsights(
       JSON.stringify({ error: 'Unauthorized' }),
       {
         status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  if (!env.SUPPLY_DB) {
+    return new Response(
+      JSON.stringify({ error: 'Database not configured' }),
+      {
+        status: 503,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );

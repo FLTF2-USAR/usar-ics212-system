@@ -17,6 +17,7 @@ import { handleManualDigest } from './handlers/digest';
 import { handleAnalyze } from './handlers/analyze';
 import { handleGetInventory, handleAdjustInventory } from './handlers/inventory';
 import { handleCreateTasks, handleGetTasks, handleUpdateTask } from './handlers/tasks';
+import { handleAIInsights, handleGetInsights } from './handlers/ai-insights';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -49,7 +50,7 @@ const CACHE_TTL = {
 };
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -187,6 +188,15 @@ export default {
     if (taskMatch && request.method === 'PATCH') {
       const taskId = taskMatch[1];
       return await handleUpdateTask(request, env, corsHeaders, taskId);
+    }
+
+    // NEW: AI Insights endpoints (admin only)
+    if (path === '/api/ai/inventory-insights' && request.method === 'POST') {
+      return await handleAIInsights(request, env, ctx, corsHeaders);
+    }
+
+    if (path === '/api/ai/insights' && request.method === 'GET') {
+      return await handleGetInsights(request, env, corsHeaders);
     }
 
     // Route to appropriate handler

@@ -4,9 +4,25 @@
  * This module provides functions to interact with the inventory and task management endpoints.
  */
 
-import { getHeaders } from './github';
-
 const API_BASE = 'https://mbfd-github-proxy.pdarleyjr.workers.dev/api';
+
+/**
+ * Get headers for API requests including admin authentication
+ */
+function getHeaders(requiresAdmin: boolean = false): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (requiresAdmin) {
+    const adminPassword = localStorage.getItem('adminPassword');
+    if (adminPassword) {
+      headers['X-Admin-Password'] = adminPassword;
+    }
+  }
+
+  return headers;
+}
 
 export interface InventoryItem {
   id: string;
@@ -190,6 +206,96 @@ export async function adjustInventory(
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(error.error || error.details || `Failed to adjust inventory: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * AI Insights types
+ */
+export interface AIInsight {
+  id: string;
+  apparatus: string;
+  insight_json: string;
+  created_at: string;
+  model?: string;
+  status: 'success' | 'error' | 'pending';
+}
+
+export interface AIInsightData {
+  summary: string;
+  recurringIssues: string[];
+  reorderSuggestions: Array<{
+    item: string;
+    reason: string;
+    urgency: string;
+  }>;
+  anomalies: string[];
+}
+
+/**
+ * Generate AI insights from current inventory and tasks
+ */
+export async function generateAIInsights(data: {
+  tasks?: SupplyTask[];
+  inventory?: InventoryItem[];
+}): Promise<{
+  ok: boolean;
+  message: string;
+}> {
+  const response = await fetch(`${API_BASE}/ai/inventory-insights`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getHeaders(true), // Admin auth required
+    },
+    body: JSON.stringify({
+      tasks: data.tasks?.map(t => ({
+        id: t.id,
+        apparatus: t.apparatus,
+        itemName: t.itemName,
+        deficiencyType: t.deficiencyType,
+      })),
+      inventory: data.inventory?.map(i => ({
+        id: i.id,
+        equipmentName: i.equipmentName,
+        quantity: i.quantity,
+        minQty: i.minQty,
+      })),
+    }),
+  });
+
+  if (!response.ok) {
+    // If AI not configured, return gracefully
+    if (response.status === 501) {
+      return {
+        ok: false,
+        message: 'AI integration not configured',
+      };
+    }
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to generate insights: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Fetch latest AI insights
+ */
+export async function fetchAIInsights(): Promise<{
+  insights: AIInsight[];
+  count: number;
+}> {
+  const response = await fetch(`${API_BASE}/ai/insights`, {
+    method: 'GET',
+    headers: getHeaders(true), // Admin auth required
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to fetch insights: ${response.statusText}`);
   }
 
   return await response.json();

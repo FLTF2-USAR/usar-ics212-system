@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { Package, ClipboardList, Lightbulb } from 'lucide-react';
+import { Package, ClipboardList, Lightbulb, Brain } from 'lucide-react';
 import { SupplyListPanel } from './SupplyListPanel';
 import { TasksPanel } from './TasksPanel';
 import { SuggestionsPanel } from './SuggestionsPanel';
+import { AIInsightsPanel } from './AIInsightsPanel';
 import { useInventory } from '../../hooks/useInventory';
+import { useSupplyTasks } from '../../hooks/useSupplyTasks';
 
-type InventorySubTab = 'list' | 'tasks' | 'suggestions';
+type InventorySubTab = 'list' | 'tasks' | 'suggestions' | 'ai-insights';
 
 export const InventoryTab: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<InventorySubTab>('list');
   const { items, isLoading, error, refresh, lastFetchedAt } = useInventory();
+  const { tasks } = useSupplyTasks();
 
   return (
     <div className="space-y-6">
@@ -63,6 +66,17 @@ export const InventoryTab: React.FC = () => {
           <Lightbulb className="w-5 h-5" />
           Suggestions
         </button>
+        <button
+          onClick={() => setActiveSubTab('ai-insights')}
+          className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeSubTab === 'ai-insights'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <Brain className="w-5 h-5" />
+          AI Insights
+        </button>
       </div>
 
       {/* Panel Content */}
@@ -80,6 +94,9 @@ export const InventoryTab: React.FC = () => {
         )}
         {activeSubTab === 'suggestions' && (
           <SuggestionsPanel />
+        )}
+        {activeSubTab === 'ai-insights' && (
+          <AIInsightsPanel inventory={items} tasks={tasks} />
         )}
       </div>
     </div>
