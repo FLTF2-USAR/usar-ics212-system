@@ -71,32 +71,26 @@ const CACHE_TTL = {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    // CORS headers for all responses
-    const origin = request.headers.get('Origin');
-    
-    // Allow requests from GitHub Pages (including subpaths)
-    const isAllowedOrigin = origin && (
-      origin === ALLOWED_ORIGIN || 
-      origin.startsWith(`${ALLOWED_ORIGIN}/`) ||
-      origin === 'https://pdarleyjr.github.io'
-    );
-    
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': isAllowedOrigin ? origin : ALLOWED_ORIGIN,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
-      'Access-Control-Max-Age': '86400', // 24 hours
-    };
-    
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
-        headers: corsHeaders,
+        headers: {
+          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
+        },
       });
     }
 
     const url = new URL(request.url);
     const path = url.pathname;
+
+    // CORS headers for all responses
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
+    };
 
     // Health check endpoint (always accessible)
     if (path === '/health') {
@@ -108,15 +102,16 @@ export default {
         cacheEnabled: true,
         emailConfigured: !!(env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN),
         kvConfigured: !!env.MBFD_CONFIG
-      }, { headers: corsHeaders });
+      });
     }
 
-    // Origin check for security - but be more lenient for legitimate GitHub Pages requests
-    if (origin && !isAllowedOrigin) {
+    // Origin check for security (allow requests only from our app)
+    const origin = request.headers.get('Origin');
+    if (origin && !origin.startsWith(ALLOWED_ORIGIN)) {
       console.error('Forbidden: Invalid origin', origin);
       return jsonResponse(
         { error: 'Forbidden', message: 'Access denied from this origin' },
-        { status: 403, headers: corsHeaders }
+        { status: 403 }
       );
     }
 
@@ -128,7 +123,7 @@ export default {
           error: 'Server configuration error', 
           message: 'GitHub token not configured. Please set GITHUB_TOKEN in Cloudflare Worker settings.' 
         },
-        { status: 500, headers: corsHeaders }
+        { status: 500 }
       );
     }
 
@@ -140,7 +135,7 @@ export default {
           error: 'Server configuration error', 
           message: 'Admin password not configured. Please set ADMIN_PASSWORD in Cloudflare Worker settings.' 
         },
-        { status: 500, headers: corsHeaders }
+        { status: 500 }
       );
     }
 
@@ -162,7 +157,7 @@ export default {
         console.warn('Unauthorized admin access attempt');
         return jsonResponse(
           { error: 'Unauthorized. Invalid admin password.' },
-          { status: 401, headers: corsHeaders }
+          { status: 401 }
         );
       }
     }
@@ -260,7 +255,7 @@ export default {
       return handleIssuesRequest(request, env, url);
     }
 
-    return jsonResponse({ error: 'Not found' }, { status: 404, headers: corsHeaders });
+    return jsonResponse({ error: 'Not found' }, { status: 404 });
   },
 
   // NEW: Cron trigger handler for daily digest
