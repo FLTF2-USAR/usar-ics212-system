@@ -143,9 +143,11 @@ export default {
     const labelsParam = url.searchParams.get('labels') || '';
     const hasApparatusFilter = labelsParam.includes('Rescue') || labelsParam.includes('Engine');
     
+    // Allow receipts creation and log issue closing for regular users
+    // Only these operations require admin: bulk queries without filters, resolving defects
     const isAdminEndpoint = path.includes('/admin/') || 
                             path.includes('/resolve') || 
-                            (path.startsWith('/api/issues/') && request.method === 'PATCH') ||
+                            (path.startsWith('/api/issues/') && request.method === 'PATCH' && !path.match(/^\/api\/issues\/\d+$/)) ||
                             (path === '/api/issues' && request.method === 'GET' && !hasApparatusFilter);
     
     if (isAdminEndpoint) {

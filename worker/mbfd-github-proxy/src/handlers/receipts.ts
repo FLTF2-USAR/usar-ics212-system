@@ -338,11 +338,11 @@ export async function handleCreateReceipt(
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   try {
-    // Verify admin password
+    // Verify admin password if provided (optional for regular users)
     const password = request.headers.get('X-Admin-Password');
-    if (!password || password !== env.ADMIN_PASSWORD) {
+    if (password && password !== env.ADMIN_PASSWORD) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized', message: 'Valid admin password required' }),
+        JSON.stringify({ error: 'Unauthorized', message: 'Invalid admin password' }),
         {
           status: 401,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
