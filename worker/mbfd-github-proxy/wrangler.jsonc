@@ -26,6 +26,15 @@
 		}
 	],
 	
+	// D1 database for supply tasks
+	"d1_databases": [
+		{
+			"binding": "SUPPLY_DB",
+			"database_name": "mbfd-supply-db",
+			"database_id": "cf08a755-e162-4144-a2a5-db34aa1216ad"
+		}
+	],
+	
 	// Cron trigger for daily digest at 12:00 PM Pacific (20:00 UTC in winter, 19:00 UTC in summer)
 	// Note: Adjusting for Pacific Standard Time (UTC-8)
 	"triggers": {

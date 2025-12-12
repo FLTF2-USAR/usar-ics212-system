@@ -15,6 +15,9 @@ import { handleNotify } from './handlers/notify';
 import { handleGetEmailConfig, handleUpdateEmailConfig } from './handlers/config';
 import { handleManualDigest } from './handlers/digest';
 import { handleAnalyze } from './handlers/analyze';
+import { handleGetInventory, handleAdjustInventory } from './handlers/inventory';
+import { handleCreateTasks, handleGetTasks, handleUpdateTask } from './handlers/tasks';
+import { handleAIInsights, handleGetInsights } from './handlers/ai-insights';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -25,8 +28,13 @@ export interface Env {
   GMAIL_CLIENT_SECRET: string;
   GMAIL_REFRESH_TOKEN: string;
   GMAIL_SENDER_EMAIL: string;
+  // Google Sheets service account
+  GOOGLE_SA_KEY: string;
+  GOOGLE_SHEET_ID: string;
   // KV namespace for configuration and queuing
   MBFD_CONFIG: KVNamespace;
+  // D1 database for task storage
+  SUPPLY_DB?: D1Database;
   // AI binding (optional)
   AI?: any;
 }
@@ -42,7 +50,7 @@ const CACHE_TTL = {
 };
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -155,6 +163,40 @@ export default {
     // NEW: AI Analysis endpoint (admin only)
     if (path === '/api/analyze' && request.method === 'GET') {
       return await handleAnalyze(request, env, corsHeaders);
+    }
+
+    // New: Inventory endpoints
+    if (path === '/api/inventory' && request.method === 'GET') {
+      return await handleGetInventory(request, env, corsHeaders);
+    }
+
+    if (path === '/api/inventory/adjust' && request.method === 'POST') {
+      return await handleAdjustInventory(request, env, corsHeaders);
+    }
+
+    // NEW: Task endpoints
+    if (path === '/api/tasks' && request.method === 'GET') {
+      return await handleGetTasks(request, env, corsHeaders);
+    }
+
+    if (path === '/api/tasks' && request.method === 'POST') {
+      return await handleCreateTasks(request, env, corsHeaders);
+    }
+
+    // Task update endpoint - extract ID from path
+    const taskMatch = path.match(/^\/api\/tasks\/(.+)$/);
+    if (taskMatch && request.method === 'PATCH') {
+      const taskId = taskMatch[1];
+      return await handleUpdateTask(request, env, corsHeaders, taskId);
+    }
+
+    // NEW: AI Insights endpoints (admin only)
+    if (path === '/api/ai/inventory-insights' && request.method === 'POST') {
+      return await handleAIInsights(request, env, ctx, corsHeaders);
+    }
+
+    if (path === '/api/ai/insights' && request.method === 'GET') {
+      return await handleGetInsights(request, env, corsHeaders);
     }
 
     // Route to appropriate handler
