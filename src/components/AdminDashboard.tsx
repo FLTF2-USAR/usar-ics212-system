@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail } from 'lucide-react';
+import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
+import { AIFleetInsights } from './AIFleetInsights';
 import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
 import { APPARATUS_LIST } from '../lib/config';
 import type { Defect, EmailConfig } from '../types';
 
-type TabType = 'fleet' | 'activity' | 'supplies' | 'notifications';
+type TabType = 'fleet' | 'activity' | 'supplies' | 'notifications' | 'insights';
 
 interface DailySubmissions {
   today: string[];
@@ -45,6 +46,9 @@ export const AdminDashboard: React.FC = () => {
   const [isLoadingConfig, setIsLoadingConfig] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
+
+  // AI Insights state
+  const [criticalAlertsCount, setCriticalAlertsCount] = useState(0);
 
   const handlePasswordSubmit = async () => {
     if (!passwordInput.trim()) {
@@ -372,6 +376,25 @@ export const AdminDashboard: React.FC = () => {
               <Mail className="w-5 h-5" />
               Notifications
             </button>
+            <button
+              onClick={() => {
+                setActiveTab('insights');
+                setCriticalAlertsCount(0); // Clear badge when viewing
+              }}
+              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 relative ${
+                activeTab === 'insights'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Brain className="w-5 h-5" />
+              Fleet Insights
+              {criticalAlertsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                  {criticalAlertsCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -629,6 +652,16 @@ export const AdminDashboard: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Fleet Insights Tab */}
+        {activeTab === 'insights' && (
+          <>
+            <AIFleetInsights 
+              adminPassword={passwordInput}
+              onCriticalAlertCount={setCriticalAlertsCount}
+            />
+          </>
         )}
 
         {/* Notifications Tab */}
