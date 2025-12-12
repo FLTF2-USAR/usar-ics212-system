@@ -70,8 +70,19 @@ export async function handleNotify(
     // Get email configuration
     const config = await getEmailConfig(env);
 
-    // Determine if we should send immediately
+    // Determine if we should send immediately based on time
+    // Convert current time to Pacific Time and check if it's after 12:00 PM
+    const now = new Date();
+    const pacificTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+    const currentHour = pacificTime.getHours();
+    const isAfterNoon = currentHour >= 12;
+
+    // Send immediately if:
+    // 1. It's after 12 PM Pacific, OR
+    // 2. Mode is per_submission, OR
+    // 3. Mode is hybrid AND has critical defects
     const shouldSendImmediately = 
+      isAfterNoon ||
       config.email_mode === 'per_submission' ||
       (config.email_mode === 'hybrid' && notification.hasCriticalDefects && config.enable_immediate_for_critical);
 
@@ -96,7 +107,7 @@ export async function handleNotify(
             JSON.stringify({ 
               success: true,
               notification_sent: 'immediate',
-              message: 'Notification sent successfully'
+              message: isAfterNoon ? 'Sent immediately (after 12 PM)' : 'Notification sent successfully'
             }),
             { 
               status: 200, 
@@ -137,14 +148,14 @@ export async function handleNotify(
         );
       }
     } else {
-      // Queue for daily digest (default behavior)
+      // Queue for daily digest (before 12 PM or daily_digest mode)
       await queueNotification(env, notification);
       
       return new Response(
         JSON.stringify({ 
           success: true,
           notification_sent: 'queued',
-          message: 'Queued for daily digest'
+          message: isAfterNoon ? 'Queued for daily digest' : 'Queued for 12 PM daily digest'
         }),
         { 
           status: 200, 

@@ -725,26 +725,60 @@ ${resolutionNote}
    * Manually trigger daily digest (ADMIN ONLY)
    */
   async sendManualDigest(adminPassword: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/digest/send`, {
-        method: 'POST',
-        headers: {
-          'X-Admin-Password': adminPassword,
-        },
-      });
+    const response = await fetch(`${API_BASE_URL}/digest/send`, {
+      method: 'POST',
+      headers: {
+        'X-Admin-Password': adminPassword,
+      },
+    });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Unauthorized');
-        }
-        throw new Error('Failed to send digest');
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Unauthorized');
       }
-
-      return response.json();
-    } catch (error) {
-      console.error('Error sending manual digest:', error);
-      throw error;
+      throw new Error('Failed to send digest');
     }
+
+    return response.json();
+  }
+
+  /**
+   * Get AI-generated fleet insights (admin only, requires Workers AI)
+   */
+  async getAIInsights(
+    adminPassword: string,
+    timeframe: 'week' | 'month' | 'all' = 'week',
+    apparatus?: string
+  ): Promise<{
+    insights: string[];
+    dataPoints: number;
+    timeframe: string;
+    apparatus: string;
+    generatedAt: string;
+  }> {
+    const params = new URLSearchParams({
+      timeframe,
+      ...(apparatus && { apparatus })
+    });
+
+    const response = await fetch(`${API_BASE_URL}/analyze?${params}`, {
+      method: 'GET',
+      headers: {
+        'X-Admin-Password': adminPassword,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Unauthorized');
+      }
+      if (response.status === 503) {
+        throw new Error('AI features not enabled');
+      }
+      throw new Error('Failed to fetch AI insights');
+    }
+
+    return response.json();
   }
 }
 

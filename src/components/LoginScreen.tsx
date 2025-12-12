@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { APPARATUS_LIST } from '../lib/config';
@@ -51,8 +51,12 @@ export const LoginScreen: React.FC = () => {
         <CardContent className="py-8 px-6">
           {/* Logo/Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-600 to-red-700 rounded-3xl mb-4 shadow-xl">
-              <Truck className="w-10 h-10 text-white" />
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-4 shadow-xl overflow-hidden bg-transparent">
+              <img 
+                src="/mbfd-checkout-system/mbfd_logo.png" 
+                alt="MBFD Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent mb-1">
               MBFD Checkout
@@ -207,10 +211,10 @@ export const LoginScreen: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* MBFD Badge at bottom */}
+      {/* Creator Badge at bottom */}
       <div className="fixed bottom-4 left-0 right-0 text-center">
         <p className="text-gray-700 text-xs font-semibold opacity-90 bg-white/50 backdrop-blur-sm py-2 px-4 rounded-full inline-block shadow-sm">
-          Miami Beach Fire Department
+          Created by Peter Darley
         </p>
       </div>
     </div>

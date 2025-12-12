@@ -14,9 +14,10 @@
 import { handleNotify } from './handlers/notify';
 import { handleGetEmailConfig, handleUpdateEmailConfig } from './handlers/config';
 import { handleManualDigest } from './handlers/digest';
+import { handleAnalyze } from './handlers/analyze';
 import { sendDailyDigest } from './digest';
 
-interface Env {
+export interface Env {
   GITHUB_TOKEN: string;
   ADMIN_PASSWORD: string;
   // Gmail OAuth secrets
@@ -26,6 +27,8 @@ interface Env {
   GMAIL_SENDER_EMAIL: string;
   // KV namespace for configuration and queuing
   MBFD_CONFIG: KVNamespace;
+  // AI binding (optional)
+  AI?: any;
 }
 
 const REPO_OWNER = 'pdarleyjr';
@@ -147,6 +150,11 @@ export default {
     // NEW: Manual digest trigger (admin only)
     if (path === '/api/digest/send' && request.method === 'POST') {
       return await handleManualDigest(request, env, corsHeaders);
+    }
+
+    // NEW: AI Analysis endpoint (admin only)
+    if (path === '/api/analyze' && request.method === 'GET') {
+      return await handleAnalyze(request, env, corsHeaders);
     }
 
     // Route to appropriate handler

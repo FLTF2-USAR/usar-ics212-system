@@ -23,6 +23,8 @@ export const InspectionWizard: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submissionDefectCount, setSubmissionDefectCount] = useState(0);
+  const [userEmail, setUserEmail] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // LocalStorage for remembering last entries
   const [lastOfficerValues, setLastOfficerValues] = useLocalStorage<Record<string, string | number>>('mbfd_last_officer_values', {});
@@ -129,12 +131,43 @@ export const InspectionWizard: React.FC = () => {
   };
 
   const handleCheckAllOfficer = () => {
-    setOfficerItems(prev => prev.map(item => ({
-      ...item,
-      checked: true,
-      // Keep existing values, only fill empty required fields with placeholder
-      value: item.value || (item.required && item.inputType !== 'checkbox' ? 'N/A' : item.value)
-    })));
+    setOfficerItems(prev => prev.map(item => {
+      // Auto-fill with sensible default values for specific fields
+      let defaultValue: string | number = item.value || '';
+      
+      // If field is empty and required, set appropriate defaults
+      if (!item.value || item.value === '') {
+        switch (item.id) {
+          case 'psi_front':
+          case 'psi_rear':
+            defaultValue = 115; // Typical Freightliner rescue truck tire PSI
+            break;
+          case 'brake_psi':
+            defaultValue = 120; // Typical brake PSI
+            break;
+          case 'm_cylinder_psi':
+            defaultValue = 1800; // Mid-range M Cylinder PSI (1000-2000)
+            break;
+          case 'fuel_percent':
+            defaultValue = 100; // Full tank
+            break;
+          case 'def_percent':
+            defaultValue = 100; // Full DEF
+            break;
+          default:
+            if (item.required && item.inputType !== 'checkbox') {
+              defaultValue = 'N/A';
+            }
+            break;
+        }
+      }
+      
+      return {
+        ...item,
+        checked: true,
+        value: defaultValue
+      };
+    }));
   };
 
   const handleCheckAllCompartment = () => {
@@ -253,6 +286,53 @@ export const InspectionWizard: React.FC = () => {
       alert(errorMessage);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!userEmail || !userEmail.includes('@')) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      // Create a summary of the inspection for email
+      const emailBody = {
+        to: userEmail,
+        subject: `MBFD Inspection Summary - ${user?.apparatus} - ${new Date().toLocaleDateString()}`,
+        inspection: {
+          apparatus: user?.apparatus,
+          operator: user?.name,
+          rank: user?.rank,
+          date: new Date().toISOString(),
+          shift: user?.shift,
+          unitNumber: user?.unitNumber,
+          defectCount: submissionDefectCount,
+          officerChecklist: officerItems,
+        },
+      };
+
+      // Send via Gmail API through the worker
+      const response = await fetch('https://mbfd-github-proxy.pdarleyjr.workers.dev/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailBody),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send email');
+      }
+
+      alert('✅ Inspection summary sent to your email!');
+      setUserEmail('');
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('Failed to send email. Please try again.');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -532,6 +612,31 @@ export const InspectionWizard: React.FC = () => {
                 Issues have been logged and will be reviewed by maintenance.
               </p>
             )}
+          </div>
+
+          {/* Email Section */}
+          <div className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
+            <p className="text-sm font-bold text-blue-900 mb-3">
+              📧 Get a copy of this inspection via email
+            </p>
+            <div className="space-y-2">
+              <input
+                type="email"
+                value={userEmail}
+                onChange={(e) => setUserEmail(e.target.value)}
+                placeholder="Enter your email address"
+                className="w-full px-4 py-3 rounded-xl border-2 border-blue-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-600 outline-none transition-all text-base"
+                disabled={isSendingEmail}
+              />
+              <Button
+                onClick={handleSendEmail}
+                disabled={isSendingEmail || !userEmail}
+                variant="secondary"
+                className="w-full h-10 text-sm font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
+              >
+                {isSendingEmail ? 'Sending...' : 'Send Summary'}
+              </Button>
+            </div>
           </div>
 
           <Button

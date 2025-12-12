@@ -9,7 +9,7 @@ export interface User {
 
 export interface CompartmentItem {
   name: string;
-  inputType?: 'checkbox' | 'text' | 'number' | 'percentage';
+  inputType?: 'checkbox' | 'text' | 'number' | 'percentage' | 'radio';
   expectedQuantity?: number;
   note?: string;
 }
@@ -26,9 +26,10 @@ export interface ChecklistItem {
   status: ItemStatus;
   notes?: string;
   photoUrl?: string;
-  inputType?: 'checkbox' | 'text' | 'number' | 'percentage';
+  inputType?: 'checkbox' | 'text' | 'number' | 'percentage' | 'radio';
   expectedQuantity?: number;
   value?: string | number;
+  radioNumber?: string;
 }
 
 // Daily Schedule Task
@@ -42,7 +43,7 @@ export interface OfficerChecklistItem {
   id: string;
   name: string;
   checked: boolean;
-  inputType?: 'checkbox' | 'text' | 'number' | 'percentage';
+  inputType?: 'checkbox' | 'text' | 'number' | 'percentage' | 'radio';
   value?: string | number;
   required?: boolean;
 }
@@ -55,7 +56,8 @@ export interface ChecklistData {
   officerChecklist?: Array<{
     id: string;
     name: string;
-    inputType?: 'checkbox' | 'text' | 'number' | 'percentage';
+    inputType?: 'checkbox' | 'text' | 'number' | 'percentage' | 'radio';
+    required?: boolean;
   }>;
 }
 

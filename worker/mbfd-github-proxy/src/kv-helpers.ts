@@ -41,7 +41,7 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
   daily_email_hard_cap: 250,
   digest_send_time: '12:00',
   digest_timezone: 'America/Los_Angeles',
-  recipients: ['admin@mbfd.org'],
+  recipients: ['mbfdinventory@gmail.com'],
   enable_immediate_for_critical: true,
   email_subject_template: 'MBFD Daily Inspection Summary - {date}',
   enabled: true

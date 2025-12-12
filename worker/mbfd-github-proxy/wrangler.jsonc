@@ -30,6 +30,9 @@
 	// Note: Adjusting for Pacific Standard Time (UTC-8)
 	"triggers": {
 		"crons": ["0 20 * * *"]
+	},
+	"ai": {
+		"binding": "AI"
 	}
 	/**
 	 * Smart Placement
