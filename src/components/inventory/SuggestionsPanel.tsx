@@ -1,10 +1,9 @@
 import React from 'react';
 import { Lightbulb, Package, AlertCircle, CheckCircle } from 'lucide-react';
-import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { useSupplyTasks } from '../../hooks/useSupplyTasks';
 import { useInventory } from '../../hooks/useInventory';
-import type { SupplyTask, SuggestedReplacement } from '../../lib/inventory';
+import type { SuggestedReplacement } from '../../lib/inventory';
 
 export const SuggestionsPanel: React.FC = () => {
   const { tasks, isLoading: tasksLoading } = useSupplyTasks('pending');
