@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Brain, Sparkles, AlertTriangle, CheckCircle, TrendingUp, Package, RefreshCw } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
@@ -61,14 +61,6 @@ export const AIFleetInsights: React.FC<AIFleetInsightsProps> = ({ adminPassword,
       setIsLoadingInsights(false);
     }
   };
-
-  // REMOVED: Auto-load on mount/filters to prevent continuous loop
-  // AI analysis now requires explicit user button click
-  // useEffect(() => {
-  //   if (adminPassword) {
-  //     loadAIInsights();
-  //   }
-  // }, [selectedTimeframe, selectedApparatus, adminPassword]);
 
   const renderInsightCard = (insight: string, index: number) => {
     const isCritical = insight.toLowerCase().includes('critical') || insight.toLowerCase().includes('urgent');
