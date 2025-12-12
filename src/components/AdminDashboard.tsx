@@ -968,6 +968,10 @@ export const AdminDashboard: React.FC = () => {
                 const totalItems = totalMatch ? parseInt(totalMatch[1]) : 0;
                 const issuesFound = issuesMatch ? parseInt(issuesMatch[1]) : 0;
                 
+                // Parse receipt URL if present
+                const receiptMatch = log.body.match(/\[View Full Printable Receipt\]\(([^)]+)\)/);
+                const receiptURL = receiptMatch ? receiptMatch[1] : null;
+                
                 const hasIssues = issuesFound > 0;
                 
                 return (
@@ -1017,7 +1021,17 @@ export const AdminDashboard: React.FC = () => {
                         </div>
                       )}
                       
-                      <div className="mt-3 text-right">
+                      <div className="mt-3 flex items-center gap-3 justify-end">
+                        {receiptURL && (
+                          <a
+                            href={receiptURL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-1"
+                          >
+                            📋 View Receipt
+                          </a>
+                        )}
                         <a
                           href={log.html_url}
                           target="_blank"
