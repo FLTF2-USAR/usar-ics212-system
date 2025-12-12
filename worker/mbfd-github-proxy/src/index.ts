@@ -31,6 +31,7 @@ import { handleGetInventory, handleAdjustInventory } from './handlers/inventory'
 import { handleCreateTasks, handleGetTasks, handleUpdateTask } from './handlers/tasks';
 import { handleAIInsights, handleGetInsights } from './handlers/ai-insights';
 import { handleSendEmail } from './handlers/send-email';
+import { handleCreateReceipt, handleGetReceipt } from './handlers/receipts';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -50,6 +51,9 @@ export interface Env {
   SUPPLY_DB?: D1Database;
   // AI binding (optional)
   AI?: any;
+  // Receipt hosting configuration
+  MBFD_HOSTNAME?: string;
+  RECEIPT_TTL_DAYS?: string;
 }
 
 const REPO_OWNER = 'pdarleyjr';
@@ -215,6 +219,18 @@ export default {
 
     if (path === '/api/ai/insights' && request.method === 'GET') {
       return await handleGetInsights(request, env, corsHeaders);
+    }
+
+    // NEW: Receipt endpoints
+    if (path === '/api/receipts' && request.method === 'POST') {
+      return await handleCreateReceipt(request, env, corsHeaders);
+    }
+
+    // Receipt retrieval endpoint - extract ID from path
+    const receiptMatch = path.match(/^\/receipts\/([0-9a-f-]+)$/);
+    if (receiptMatch && request.method === 'GET') {
+      const receiptId = receiptMatch[1];
+      return await handleGetReceipt(request, env, receiptId);
     }
 
     // Route to appropriate handler
