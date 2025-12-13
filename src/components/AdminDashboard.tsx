@@ -8,7 +8,7 @@ import { InventoryTab } from './inventory/InventoryTab';
 import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
 import { APPARATUS_LIST } from '../lib/config';
-import type { Defect, EmailConfig } from '../types';
+import type { Defect, EmailConfig, GitHubIssue } from '../types';
 
 type TabType = 'fleet' | 'activity' | 'supplies' | 'inventory' | 'notifications' | 'insights';
 
@@ -36,6 +36,11 @@ export const AdminDashboard: React.FC = () => {
   const [dailySubmissions, setDailySubmissions] = useState<DailySubmissions | null>(null);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Inspection logs state
+  const [inspectionLogs, setInspectionLogs] = useState<GitHubIssue[]>([]);
+  const [selectedApparatus, setSelectedApparatus] = useState<string | null>(null);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
   // Email notification state
   const [emailConfig, setEmailConfig] = useState<EmailConfig | null>(null);
@@ -51,13 +56,32 @@ export const AdminDashboard: React.FC = () => {
 
   const loadApparatusLogs = async (apparatus: string) => {
     try {
+      setIsLoadingLogs(true);
+      setSelectedApparatus(apparatus);
+      setActiveTab('activity'); // Switch to activity tab
       const logs = await githubService.getInspectionLogs(30); // Last 30 days
       // Filter logs for this apparatus
       const filteredLogs = logs.filter(log => log.title.includes(`[${apparatus}]`));
-      console.log('Loaded inspection logs:', filteredLogs);
+      setInspectionLogs(filteredLogs);
     } catch (error) {
       console.error('Error loading apparatus logs:', error);
       alert('Failed to load inspection history');
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  const loadAllInspectionLogs = async () => {
+    try {
+      setIsLoadingLogs(true);
+      setSelectedApparatus(null);
+      const logs = await githubService.getInspectionLogs(30); // Last 30 days
+      setInspectionLogs(logs);
+    } catch (error) {
+      console.error('Error loading all inspection logs:', error);
+      // Don't alert, just log - this is not critical
+    } finally {
+      setIsLoadingLogs(false);
     }
   };
 
@@ -186,6 +210,13 @@ export const AdminDashboard: React.FC = () => {
     
     return () => clearInterval(interval);
   }, [isAuthenticated]);
+
+  // Load inspection logs when switching to activity tab
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'activity' && inspectionLogs.length === 0 && !isLoadingLogs) {
+      loadAllInspectionLogs();
+    }
+  }, [isAuthenticated, activeTab]);
 
   // Show password prompt if not authenticated
   if (!isAuthenticated) {
@@ -490,6 +521,164 @@ export const AdminDashboard: React.FC = () => {
                 />
               </div>
             )}
+
+            {/* Inspection History */}
+            <div className="mt-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Calendar className="w-6 h-6" />
+                Inspection History (Last 30 Days)
+                {selectedApparatus && (
+                  <span className="text-blue-600">- {selectedApparatus}</span>
+                )}
+              </h3>
+
+              <Card className="mb-6">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <Calendar className="w-5 h-5" />
+                      Inspection History (Last 30 Days)
+                    </h3>
+                    <div className="flex gap-2">
+                      {selectedApparatus && (
+                        <Button
+                          onClick={loadAllInspectionLogs}
+                          variant="secondary"
+                          size="sm"
+                        >
+                          View All
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => selectedApparatus ? loadApparatusLogs(selectedApparatus) : loadAllInspectionLogs()}
+                        variant="secondary"
+                        size="sm"
+                        disabled={isLoadingLogs}
+                      >
+                        {isLoadingLogs ? 'Loading...' : 'Refresh'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {isLoadingLogs ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <p className="text-gray-600 text-sm">Loading inspection logs...</p>
+                    </div>
+                  ) : inspectionLogs.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600">
+                        {selectedApparatus
+                          ? `No inspection logs found for ${selectedApparatus} in the last 30 days.`
+                          : 'No inspection logs found. Click an apparatus card in Fleet Status to view its history.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {inspectionLogs.map(log => {
+                        // Parse log details from title and body
+                        const titleMatch = log.title.match(/\[(.+)\]\s+Daily Inspection\s*-\s*(.+)/);
+                        const apparatus = titleMatch ? titleMatch[1] : 'Unknown';
+                        const dateStr = titleMatch ? titleMatch[2] : formatDateTime(log.created_at);
+                        
+                        // Extract inspector info from body
+                        const inspectorMatch = log.body?.match(/\*\*Conducted By:\*\*\s*(.+?)\s*\((.+?)\)/);
+                        const inspector = inspectorMatch ? inspectorMatch[1] : 'Unknown';
+                        const rank = inspectorMatch ? inspectorMatch[2] : '';
+                        
+                        // Extract item count
+                        const itemsMatch = log.body?.match(/\*\*Total Items Checked:\*\*\s*(\d+)/);
+                        const totalItems = itemsMatch ? parseInt(itemsMatch[1]) : 0;
+                        
+                        // Extract defect count
+                        const defectsMatch = log.body?.match(/\*\*Issues Found:\*\*\s*(\d+)/);
+                        const defectCount = defectsMatch ? parseInt(defectsMatch[1]) : 0;
+                        
+                        // Extract receipt URL if present
+                        const receiptMatch = log.body?.match(/\[View Full Printable Receipt\]\((.+?)\)/);
+                        const receiptUrl = receiptMatch ? receiptMatch[1] : null;
+                        
+                        // Extract defect list
+                        const defectsSection = log.body?.match(/### Issues Reported\n([\s\S]+?)(?:\n\n|$)/);
+                        const defectsList = defectsSection 
+                          ? defectsSection[1].split('\n').filter(line => line.trim().startsWith('-'))
+                          : [];
+                        
+                        return (
+                          <div
+                            key={log.number}
+                            className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                                    {apparatus}
+                                  </span>
+                                  {defectCount === 0 ? (
+                                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold flex items-center gap-1">
+                                      <CheckCircle className="w-4 h-4" />
+                                      All Clear
+                                    </span>
+                                  ) : (
+                                    <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold flex items-center gap-1">
+                                      <AlertCircle className="w-4 h-4" />
+                                      {defectCount} Issue{defectCount !== 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-700 mb-1">
+                                  <strong>Inspector:</strong> {inspector} {rank && `(${rank})`}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  <strong>Date:</strong> {dateStr} • <strong>Items Checked:</strong> {totalItems}
+                                </p>
+                              </div>
+                              <div className="text-right text-xs text-gray-500">
+                                #{log.number}
+                              </div>
+                            </div>
+                            
+                            {defectsList.length > 0 && (
+                              <div className="mt-3 mb-3 bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                                <p className="text-sm font-semibold text-red-900 mb-2">Reported Issues:</p>
+                                <ul className="text-sm text-red-800 space-y-1">
+                                  {defectsList.map((defect, idx) => (
+                                    <li key={idx} className="pl-2">{defect.replace(/^-\s*/, '')}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            <div className="flex gap-2 pt-3 border-t border-gray-200">
+                              {receiptUrl && (
+                                <a
+                                  href={receiptUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-sm font-semibold transition-colors"
+                                >
+                                  📋 View Receipt
+                                </a>
+                              )}
+                              <a
+                                href={`https://github.com/pdarleyjr/mbfd-checkout-system/issues/${log.number}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-semibold transition-colors"
+                              >
+                                View on GitHub →
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </>
         )}
 
@@ -776,7 +965,7 @@ export const AdminDashboard: React.FC = () => {
                           <input
                             type="email"
                             value={email}
-                            onChange={e => {
+                            onChange={(e) => {
                               const newRecipients = [...emailConfig.recipients];
                               newRecipients[idx] = e.target.value;
                               setEmailConfig({ ...emailConfig, recipients: newRecipients });
@@ -824,7 +1013,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={emailConfig.enable_immediate_for_critical}
-                        onChange={e => saveEmailConfig({ enable_immediate_for_critical: (e.target as any).checked })}
+                        onChange={(e) => saveEmailConfig({ enable_immediate_for_critical: (e.target as any).checked })}
                         className="mt-1 w-5 h-5 text-blue-600 rounded"
                       />
                       <div>
@@ -845,7 +1034,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="number"
                         value={emailConfig.daily_email_hard_cap}
-                        onChange={e => setEmailConfig({ ...emailConfig, daily_email_hard_cap: parseInt((e.target as any).value) || 250 })}
+                        onChange={(e) => setEmailConfig({ ...emailConfig, daily_email_hard_cap: parseInt((e.target as any).value) || 250 })}
                         className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         min="1"
                         max="500"
@@ -872,7 +1061,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="text"
                         value={emailConfig.email_subject_template}
-                        onChange={e => setEmailConfig({ ...emailConfig, email_subject_template: (e.target as any).value })}
+                        onChange={(e) => setEmailConfig({ ...emailConfig, email_subject_template: (e.target as any).value })}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="MBFD Daily Inspection Summary - {date}"
                       />
