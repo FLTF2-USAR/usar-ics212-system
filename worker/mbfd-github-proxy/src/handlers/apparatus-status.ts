@@ -137,12 +137,12 @@ export async function handleGetApparatusStatus(
     const sheetName = await detectMostRecentSheet(env, env.APPARATUS_STATUS_SHEET_ID);
     
     // Read apparatus status from Google Sheet
-    // The sheet has an empty Column A, so actual data is in B, C, D, E
-    // Expected columns: (empty), Vehicle No (B), Designation (C), Assignment (D), Notes (E)
+    // The sheet has an empty Column A, so actual data is in B-G
+    // Expected columns: (empty), Vehicle No (B), Designation (C), Assignment (D), Current Location (E), Status (F), Notes (G)
     const values = await readSheet(
       env, 
       env.APPARATUS_STATUS_SHEET_ID, 
-      `${sheetName}!A2:E100`
+      `${sheetName}!A2:G100`
     );
 
     // First pass: Build vehicle data
@@ -153,30 +153,15 @@ export async function handleGetApparatusStatus(
       .map((row) => ({
         vehicleNo: row[1] || '',        // Column B
         designation: row[2] || '',       // Column C
-        assignment: row[3] || 'Unknown', // Column D (renamed from status to assignment)
-        notes: row[4] || '',             // Column E
+        assignment: row[3] || 'Unknown', // Column D
+        currentLocation: row[4] || '',   // Column E
+        status: row[5] || '',            // Column F - In Service, Out of Service, Available
+        notes: row[6] || '',             // Column G - "In service as R1", etc.
       }));
 
     // Second pass: Parse Notes to find "In service as" mappings
     const apparatusMap = new Map<string, ApparatusStatus>();
     
-    // First pass: Add designation-based mappings (lower priority)
-    for (const vehicle of vehicles) {
-      // Only add designation mappings for vehicles that are "In Service"
-      if (vehicle.designation && vehicle.assignment.toLowerCase().includes('in service')) {
-        const normalizedUnit = normalizeApparatusName(vehicle.designation);
-        if (normalizedUnit && !apparatusMap.has(normalizedUnit)) {
-          apparatusMap.set(normalizedUnit, {
-            unit: normalizedUnit,
-            vehicleNo: vehicle.vehicleNo,
-            status: vehicle.assignment,
-            notes: vehicle.notes,
-          });
-        }
-      }
-    }
-    
-    // Second pass: Override with "In service as" notes (higher priority)
     for (const vehicle of vehicles) {
       const inServiceUnit = parseInServiceUnit(vehicle.notes);
       
@@ -185,9 +170,20 @@ export async function handleGetApparatusStatus(
         apparatusMap.set(inServiceUnit, {
           unit: inServiceUnit,
           vehicleNo: vehicle.vehicleNo,
-          status: vehicle.assignment,
+          status: vehicle.status,
           notes: vehicle.notes,
         });
+      } else if (vehicle.designation && vehicle.status.toLowerCase().includes('in service')) {
+        // Only use designation if vehicle is actually "In Service" and no override exists
+        const normalizedUnit = normalizeApparatusName(vehicle.designation);
+        if (normalizedUnit && !apparatusMap.has(normalizedUnit)) {
+          apparatusMap.set(normalizedUnit, {
+            unit: normalizedUnit,
+            vehicleNo: vehicle.vehicleNo,
+            status: vehicle.status,
+            notes: vehicle.notes,
+          });
+        }
       }
     }
 
