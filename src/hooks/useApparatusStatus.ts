@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchApparatusStatus } from '../lib/inventory';
 import type { ApparatusStatus } from '../lib/inventory';
 
@@ -33,11 +33,11 @@ export function useApparatusStatus(): UseApparatusStatusReturn {
     }
   };
 
-  // Get vehicle number for a specific apparatus unit
-  const getVehicleNumber = (unit: string): string | undefined => {
+  // Get vehicle number for a specific apparatus unit - memoized to prevent infinite loops
+  const getVehicleNumber = useCallback((unit: string): string | undefined => {
     const status = statuses.find(s => s.unit === unit);
     return status?.vehicleNo;
-  };
+  }, [statuses]); // Only recreate when statuses change
 
   useEffect(() => {
     loadStatuses();

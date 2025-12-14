@@ -139,48 +139,64 @@ export async function handleGetApparatusStatus(
       );
     }
 
-    // Auto-detect the most recent sheet tab
-    const sheetName = await detectMostRecentSheet(env, env.APPARATUS_STATUS_SHEET_ID);
+    const spreadsheetId = env.APPARATUS_STATUS_SHEET_ID;
+    const sheetName = await detectMostRecentSheet(env, spreadsheetId);
     
-    // Read apparatus status from Google Sheet
-    // The sheet has an empty Column A, so actual data is in B-G
-    // Expected columns: (empty), Vehicle No (B), Designation (C), Assignment (D), Current Location (E), Status (F), Notes (G)
-    const values = await readSheet(
-      env, 
-      env.APPARATUS_STATUS_SHEET_ID, 
-      `${sheetName}!A2:G100`
-    );
-
-    // First pass: Build vehicle data
-    // Skip title & header rows (rows 0 and 1 have title + headers) and filter for rows with vehicle numbers
-    const vehicles = values
-      .slice(2) // Skip title & header rows
-      .filter(row => row[1]) // Must have vehicle number in column B (index 1)
-      .map((row) => ({
-        vehicleNo: row[1] || '',        // Column B
-        designation: row[2] || '',       // Column C
-        assignment: row[3] || 'Unknown', // Column D
-        currentLocation: row[4] || '',   // Column E
-        status: row[5] || '',            // Column F - In Service, Out of Service, Available
-        notes: row[6] || '',             // Column G - "In service as R1", etc.
+    const range = `${sheetName}!A2:G100`; // Read columns A through G
+    const result = await readSheet(env, spreadsheetId, range);
+    
+    if (!result || result.length === 0) {
+      return new Response(
+        JSON.stringify({ statuses: [], allVehicles: [] }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+    
+    // Parse ALL vehicles from the sheet (including reserves and out-of-service)
+    const allVehicles = result
+      .slice(1) // Skip header row
+      .filter((row: string[]) => row && row.length >= 2 && row[1]?.trim()) // Must have vehicle number in column B
+      .map((row: string[]) => ({
+        vehicleNo: (row[1] || '').trim(), // Column B: Vehicle No
+        designation: (row[2] || '').trim(), // Column C: Designation (E 1, R 1, etc)
+        assignment: (row[3] || '').trim(), // Column D: Assignment (Station 1, Reserve, etc)
+        currentLocation: (row[4] || '').trim(), // Column E: Current Location
+        status: (row[5] || '').trim(), // Column F: Status (In Service, Out of Service, Available)
+        notes: (row[6] || '').trim(), // Column G: Notes ("In service as R1", etc)
       }));
-
-    // Second pass: Parse Notes to find "In service as" mappings
-    const apparatusMap = new Map<string, ApparatusStatus>();
     
-    for (const vehicle of vehicles) {
+    // Build apparatus-to-vehicle mapping using the priority logic
+    const apparatusMap = new Map<string, {
+      unit: string;
+      vehicleNo: string;
+      status: string;
+      notes: string;
+    }>();
+    
+    // First pass: Process "In service as" notes (highest priority)
+    for (const vehicle of allVehicles) {
       const inServiceUnit = parseInServiceUnit(vehicle.notes);
       
       if (inServiceUnit) {
-        // This vehicle is in service as a specific unit - ALWAYS takes priority
+        // "In service as" notes ALWAYS take priority
         apparatusMap.set(inServiceUnit, {
           unit: inServiceUnit,
           vehicleNo: vehicle.vehicleNo,
           status: vehicle.status,
           notes: vehicle.notes,
         });
-      } else if (vehicle.designation && vehicle.status.toLowerCase().includes('in service')) {
-        // Only use designation if vehicle is actually "In Service" and no override exists
+      }
+    }
+    
+    // Second pass: Process designations for vehicles that are "In Service" and not already mapped
+    for (const vehicle of allVehicles) {
+      if (vehicle.designation && vehicle.status.toLowerCase().includes('in service')) {
         const normalizedUnit = normalizeApparatusName(vehicle.designation);
         if (normalizedUnit && !apparatusMap.has(normalizedUnit)) {
           apparatusMap.set(normalizedUnit, {
@@ -192,15 +208,11 @@ export async function handleGetApparatusStatus(
         }
       }
     }
-
-    const statuses = Array.from(apparatusMap.values());
-
+    
     return new Response(
       JSON.stringify({
-        statuses,
-        fetchedAt: new Date().toISOString(),
-        source: 'sheets',
-        sheetUsed: sheetName,
+        statuses: Array.from(apparatusMap.values()),
+        allVehicles: allVehicles, // Include all vehicles for UI display
       }),
       {
         status: 200,
@@ -215,7 +227,7 @@ export async function handleGetApparatusStatus(
     return new Response(
       JSON.stringify({
         error: 'Failed to fetch apparatus status',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
       {
         status: 500,

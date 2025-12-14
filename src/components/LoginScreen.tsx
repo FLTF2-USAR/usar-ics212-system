@@ -234,12 +234,18 @@ export const LoginScreen: React.FC = () => {
   });
   const [validationError, setValidationError] = useState('');
 
-  // Auto-populate vehicle number when apparatus changes
+  // Auto-populate vehicle number when apparatus changes (with debouncing to prevent freezes)
   useEffect(() => {
-    const vehicleNo = getVehicleNumber(user.apparatus);
-    if (vehicleNo) {
-      setUser((prev) => ({ ...prev, unitNumber: vehicleNo }));
-    }
+    // Debounce the vehicle number lookup to prevent rapid state updates during apparatus switching
+    const timeoutId = setTimeout(() => {
+      const vehicleNo = getVehicleNumber(user.apparatus);
+      if (vehicleNo) {
+        setUser((prev) => ({ ...prev, unitNumber: vehicleNo }));
+      }
+    }, 100); // 100ms debounce
+
+    // Cleanup timeout on unmount or when dependencies change
+    return () => clearTimeout(timeoutId);
   }, [user.apparatus, getVehicleNumber]);
 
   const handleStartInspection = () => {
