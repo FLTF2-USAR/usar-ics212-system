@@ -12,7 +12,7 @@ import { formatDateTime } from '../lib/utils';
 import { APPARATUS_LIST } from '../lib/config';
 import type { Defect, EmailConfig, GitHubIssue } from '../types';
 
-type TabType = 'fleet' | 'activity' | 'supplies' | 'inventory' | 'notifications' | 'insights' | 'apparatus-status';
+type TabType = 'fleet' | 'activity' | 'supplies' | 'inventory' | 'apparatus-status' | 'notifications' | 'insights';
 
 interface DailySubmissions {
   today: string[];
@@ -413,6 +413,15 @@ export const AdminDashboard: React.FC = () => {
             >
               <Warehouse className="w-5 h-5" />
               Inventory
+            </button>
+            <button
+              onClick={() => setActiveTab('apparatus-status')}
+              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'apparatus-status'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              <Truck className="w-5 h-5" />
+              Apparatus Status
             </button>
             <button
               onClick={() => {
