@@ -6,12 +6,13 @@ import { Card, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
 import { AIFleetInsights } from './AIFleetInsights';
 import { InventoryTab } from './inventory/InventoryTab';
+import { ApparatusStatusTab } from './ApparatusStatusTab';
 import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
 import { APPARATUS_LIST } from '../lib/config';
 import type { Defect, EmailConfig, GitHubIssue } from '../types';
 
-type TabType = 'fleet' | 'activity' | 'supplies' | 'inventory' | 'notifications' | 'insights';
+type TabType = 'fleet' | 'activity' | 'supplies' | 'inventory' | 'notifications' | 'insights' | 'apparatus-status';
 
 interface DailySubmissions {
   today: string[];
@@ -1040,6 +1041,11 @@ export const AdminDashboard: React.FC = () => {
         {/* Inventory Tab */}
         {activeTab === 'inventory' && (
           <InventoryTab />
+        )}
+
+        {/* Apparatus Status Tab */}
+        {activeTab === 'apparatus-status' && (
+          <ApparatusStatusTab />
         )}
 
         {/* Fleet Insights Tab */}

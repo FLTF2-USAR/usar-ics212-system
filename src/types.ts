@@ -174,3 +174,40 @@ export interface PendingUpload {
   timestamp: number;
   retryCount: number;
 }
+
+// Apparatus Status - tracks which vehicle number each apparatus unit is assigned to
+export interface ApparatusStatus {
+  unit: string;           // e.g., "Rescue 1", "Engine 1"
+  vehicleNo: string;      // e.g., "445", "231"
+  status: string;         // e.g., "In Service", "Out of Service"
+  notes?: string;         // Additional notes
+}
+
+// Apparatus Status API Response
+export interface ApparatusStatusResponse {
+  statuses: ApparatusStatus[];
+  fetchedAt: string;
+  source: 'sheets';
+}
+
+// Vehicle Change Request - tracks user-submitted vehicle assignment changes
+export interface VehicleChangeRequest {
+  id: string;
+  apparatus: string;         // e.g., "Rescue 1"
+  oldVehicleNo: string | null; // Previous vehicle number
+  newVehicleNo: string;      // New vehicle number reported by user
+  reportedBy: string;        // User who reported the change
+  reportedAt: string;        // ISO timestamp
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: string;       // Admin who reviewed
+  reviewedAt?: string;       // When it was reviewed
+  notes?: string;            // Admin notes about the change
+  createdAt: string;
+}
+
+// Vehicle Change Request API Response
+export interface VehicleChangeRequestResponse {
+  requests: VehicleChangeRequest[];
+  total: number;
+  pending: number;
+}

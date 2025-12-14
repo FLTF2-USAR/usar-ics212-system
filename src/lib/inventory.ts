@@ -300,3 +300,188 @@ export async function fetchAIInsights(): Promise<{
 
   return await response.json();
 }
+
+/**
+ * Apparatus Status types and functions
+ */
+export interface ApparatusStatus {
+  unit: string;
+  vehicleNo: string;
+  status: string;
+  notes?: string;
+}
+
+/**
+ * Fetch apparatus status (apparatus-to-vehicle mappings)
+ */
+export async function fetchApparatusStatus(): Promise<{
+  statuses: ApparatusStatus[];
+  fetchedAt: string;
+  source: string;
+}> {
+  const response = await fetch(`${API_BASE}/apparatus-status`, {
+    method: 'GET',
+    headers: getHeaders(false), // No admin auth required for reading
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to fetch apparatus status: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Update apparatus vehicle assignment (admin only)
+ */
+export async function updateApparatusStatus(
+  unit: string,
+  update: {
+    vehicleNo?: string;
+    status?: string;
+    notes?: string;
+  }
+): Promise<{
+  success: boolean;
+  unit: string;
+  updatedData: {
+    vehicleNo: string;
+    status: string;
+    notes: string;
+  };
+}> {
+  const response = await fetch(`${API_BASE}/apparatus-status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getHeaders(true), // Admin auth required
+    },
+    body: JSON.stringify({
+      unit,
+      ...update,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to update apparatus status: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Get vehicle number for a specific apparatus unit
+ */
+export function getVehicleNumber(
+  statuses: ApparatusStatus[],
+  unit: string
+): string | undefined {
+  const status = statuses.find(s => s.unit === unit);
+  return status?.vehicleNo;
+}
+
+/**
+ * Vehicle Change Request types and functions
+ */
+export interface VehicleChangeRequest {
+  id: string;
+  apparatus: string;
+  oldVehicleNo: string | null;
+  newVehicleNo: string;
+  reportedBy: string;
+  reportedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+/**
+ * Submit a vehicle change request when user detects apparatus is using a different vehicle
+ */
+export async function submitVehicleChangeRequest(request: {
+  apparatus: string;
+  oldVehicleNo: string | null;
+  newVehicleNo: string;
+  reportedBy: string;
+  notes?: string;
+}): Promise<{
+  success: boolean;
+  request: VehicleChangeRequest;
+}> {
+  const response = await fetch(`${API_BASE}/apparatus-status/request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getHeaders(false), // No admin auth required to submit
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to submit vehicle change request: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Fetch vehicle change requests (admin only)
+ */
+export async function fetchVehicleChangeRequests(status?: 'pending' | 'approved' | 'rejected'): Promise<{
+  requests: VehicleChangeRequest[];
+  total: number;
+  pending: number;
+}> {
+  const url = status? `${API_BASE}/apparatus-status/requests?status=${status}` : `${API_BASE}/apparatus-status/requests`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: getHeaders(true), // Admin auth required
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to fetch vehicle change requests: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Review (approve/reject) a vehicle change request (admin only)
+ */
+export async function reviewVehicleChangeRequest(
+  requestId: string,
+  action: 'approve' | 'reject',
+  reviewedBy: string,
+  notes?: string
+): Promise<{
+  success: boolean;
+  request: VehicleChangeRequest;
+  sheetUpdated?: boolean;
+}> {
+  const response = await fetch(`${API_BASE}/apparatus-status/requests/${requestId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getHeaders(true), // Admin auth required
+    },
+    body: JSON.stringify({
+      action,
+      reviewedBy,
+      notes,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to review vehicle change request: ${response.statusText}`);
+  }
+
+  return await response.json();
+}

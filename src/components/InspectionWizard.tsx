@@ -6,9 +6,10 @@ import { Card, CardHeader, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
 import { InspectionCard } from './InspectionCard';
 import { githubService } from '../lib/github';
-import { createTasks } from '../lib/inventory';
+import { createTasks, submitVehicleChangeRequest } from '../lib/inventory';
 import { useDeviceDetection } from '../hooks/useDeviceDetection';
 import { useLocalStorage, useFieldHistory } from '../hooks/useLocalStorage';
+import { useApparatusStatus } from '../hooks/useApparatusStatus';
 import type { User, ChecklistData, ChecklistItem, GitHubIssue, ItemStatus, OfficerChecklistItem } from '../types';
 
 export const InspectionWizard: React.FC = () => {
@@ -27,6 +28,11 @@ export const InspectionWizard: React.FC = () => {
   const [userEmail, setUserEmail] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
+  // Apparatus Status Integration
+  const { statuses, getVehicleNumber } = useApparatusStatus();
+  const [detectedVehicleChange, setDetectedVehicleChange] = useState(false);
+  const [expectedVehicleNo, setExpectedVehicleNo] = useState<string | undefined>();
+
   // LocalStorage for remembering last entries
   const [lastOfficerValues, setLastOfficerValues] = useLocalStorage<Record<string, string | number>>('mbfd_last_officer_values', {});
 
@@ -44,6 +50,21 @@ export const InspectionWizard: React.FC = () => {
     // Load checklist data
     loadChecklistData(parsedUser);
   }, [navigate]);
+
+  // Auto-populate vehicle number from apparatus status
+  useEffect(() => {
+    if (user && statuses.length > 0) {
+      const vehicleNo = getVehicleNumber(user.apparatus);
+      if (vehicleNo) {
+        setExpectedVehicleNo(vehicleNo);
+        
+        // Check if user's unitNumber differs from expected
+        if (user.unitNumber && user.unitNumber !== vehicleNo) {
+          setDetectedVehicleChange(true);
+        }
+      }
+    }
+  }, [user, statuses, getVehicleNumber]);
 
   const loadChecklistData = async (userData: User) => {
     try {
@@ -229,6 +250,22 @@ export const InspectionWizard: React.FC = () => {
         unitNumber: user.unitNumber,
         officerChecklist: officerItems,
       });
+
+      // Submit vehicle change request if detected
+      if (detectedVehicleChange && expectedVehicleNo && user.unitNumber !== expectedVehicleNo) {
+        try {
+          await submitVehicleChangeRequest({
+            apparatus: user.apparatus,
+            oldVehicleNo: expectedVehicleNo,
+            newVehicleNo: user.unitNumber,
+            reportedBy: user.name,
+            notes: `Vehicle change detected during inspection on ${new Date().toLocaleDateString()}`,
+          });
+          console.log('Vehicle change request submitted successfully');
+        } catch (changeError) {
+          console.error('Failed to submit vehicle change request (non-critical):', changeError);
+        }
+      }
 
       // Send notification after successful submission
       try {

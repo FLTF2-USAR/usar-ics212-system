@@ -282,3 +282,37 @@ export async function updateSheetRange(
 ): Promise<void> {
   await writeSheet(env, spreadsheetId, range, values);
 }
+
+/**
+ * Get all sheet tabs in a spreadsheet
+ */
+export async function getSheetTabs(
+  env: Env,
+  spreadsheetId: string
+): Promise<string[]> {
+  const token = await getAccessToken(env);
+  
+  const url = `${SHEETS_API_BASE}/${spreadsheetId}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get sheet tabs: ${error}`);
+  }
+
+  const data: { sheets?: Array<{ properties?: { title?: string } }> } = await response.json();
+  
+  if (!data.sheets) {
+    return [];
+  }
+  
+  return data.sheets
+    .map(sheet => sheet.properties?.title)
+    .filter((title): title is string => !!title);
+}

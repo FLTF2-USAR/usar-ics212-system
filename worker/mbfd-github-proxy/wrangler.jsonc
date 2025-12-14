@@ -30,10 +30,15 @@
 		}
 	],
 	
-	// D1 database for supply tasks
+	// D1 database for supply tasks and vehicle change requests
 	"d1_databases": [
 		{
 			"binding": "SUPPLY_DB",
+			"database_name": "mbfd-supply-db",
+			"database_id": "cf08a755-e162-4144-a2a5-db34aa1216ad"
+		},
+		{
+			"binding": "DB",
 			"database_name": "mbfd-supply-db",
 			"database_id": "cf08a755-e162-4144-a2a5-db34aa1216ad"
 		}

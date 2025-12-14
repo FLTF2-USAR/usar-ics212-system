@@ -33,6 +33,13 @@ import { handleAIInsights, handleGetInsights } from './handlers/ai-insights';
 import { handleSendEmail } from './handlers/send-email';
 import { handleCreateReceipt, handleGetReceipt } from './handlers/receipts';
 import { handleImageUpload, handleImageRetrieval } from './handlers/uploads';
+import { 
+  handleGetApparatusStatus, 
+  handleUpdateApparatusStatus,
+  handleCreateVehicleChangeRequest,
+  handleGetVehicleChangeRequests,
+  handleReviewVehicleChangeRequest
+} from './handlers/apparatus-status';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -46,12 +53,15 @@ export interface Env {
   // Google Sheets service account
   GOOGLE_SA_KEY: string;
   GOOGLE_SHEET_ID: string;
+  // Apparatus Status Sheet (separate from inventory)
+  APPARATUS_STATUS_SHEET_ID?: string;
   // KV namespace for configuration and queuing
   MBFD_CONFIG: KVNamespace;
   // KV namespace for image uploads
   MBFD_UPLOADS: KVNamespace;
-  // D1 database for task storage
+  // D1 database for task storage and vehicle change requests
   SUPPLY_DB?: D1Database;
+  DB?: D1Database; // Alias for SUPPLY_DB for consistency
   // AI binding (optional)
   AI?: any;
   // Receipt hosting configuration
@@ -199,6 +209,31 @@ export default {
 
     if (path === '/api/inventory/adjust' && request.method === 'POST') {
       return await handleAdjustInventory(request, env, corsHeaders);
+    }
+
+    // NEW: Apparatus Status endpoints
+    if (path === '/api/apparatus-status' && request.method === 'GET') {
+      return await handleGetApparatusStatus(request, env, corsHeaders);
+    }
+
+    if (path === '/api/apparatus-status' && request.method === 'POST') {
+      return await handleUpdateApparatusStatus(request, env, corsHeaders);
+    }
+
+    // NEW: Vehicle Change Request endpoints
+    if (path === '/api/apparatus-status/request' && request.method === 'POST') {
+      return await handleCreateVehicleChangeRequest(request, env, corsHeaders);
+    }
+
+    if (path === '/api/apparatus-status/requests' && request.method === 'GET') {
+      return await handleGetVehicleChangeRequests(request, env, corsHeaders);
+    }
+
+    // Vehicle change request review endpoint - extract ID from path
+    const vcRequestMatch = path.match(/^\/api\/apparatus-status\/requests\/(.+)$/);
+    if (vcRequestMatch && request.method === 'PATCH') {
+      const requestId = vcRequestMatch[1];
+      return await handleReviewVehicleChangeRequest(request, env, corsHeaders, requestId);
     }
 
     // NEW: Task endpoints
