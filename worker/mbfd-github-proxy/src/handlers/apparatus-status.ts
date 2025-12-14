@@ -100,7 +100,6 @@ async function detectMostRecentSheet(env: Env, spreadsheetId: string): Promise<s
     if (datedSheets.length > 0) {
       // Sort by date descending and return most recent
       datedSheets.sort((a, b) => b.date.getTime() - a.date.getTime());
-      console.log(`Auto-detected sheet tab: ${datedSheets[0].name}`);
       return datedSheets[0].name;
     }
     
@@ -138,21 +137,24 @@ export async function handleGetApparatusStatus(
     const sheetName = await detectMostRecentSheet(env, env.APPARATUS_STATUS_SHEET_ID);
     
     // Read apparatus status from Google Sheet
-    // Expected columns: Vehicle No (A), Designation (B), Status (C), Notes (D)
+    // The sheet has an empty Column A, so actual data is in B, C, D, E
+    // Expected columns: (empty), Vehicle No (B), Designation (C), Assignment (D), Notes (E)
     const values = await readSheet(
       env, 
       env.APPARATUS_STATUS_SHEET_ID, 
-      `${sheetName}!A2:D100`
+      `${sheetName}!A2:E100`
     );
 
     // First pass: Build vehicle data
+    // Skip title & header rows (rows 0 and 1 have title + headers) and filter for rows with vehicle numbers
     const vehicles = values
-      .filter(row => row[0]) // Must have vehicle number
+      .slice(2) // Skip title & header rows
+      .filter(row => row[1]) // Must have vehicle number in column B (index 1)
       .map((row) => ({
-        vehicleNo: row[0] || '',
-        designation: row[1] || '',
-        status: row[2] || 'Unknown',
-        notes: row[3] || '',
+        vehicleNo: row[1] || '',        // Column B
+        designation: row[2] || '',       // Column C
+        assignment: row[3] || 'Unknown', // Column D (renamed from status to assignment)
+        notes: row[4] || '',             // Column E
       }));
 
     // Second pass: Parse Notes to find "In service as" mappings
@@ -166,7 +168,7 @@ export async function handleGetApparatusStatus(
         apparatusMap.set(inServiceUnit, {
           unit: inServiceUnit,
           vehicleNo: vehicle.vehicleNo,
-          status: vehicle.status,
+          status: vehicle.assignment,
           notes: vehicle.notes,
         });
       } else if (vehicle.designation) {
@@ -176,7 +178,7 @@ export async function handleGetApparatusStatus(
           apparatusMap.set(normalizedUnit, {
             unit: normalizedUnit,
             vehicleNo: vehicle.vehicleNo,
-            status: vehicle.status,
+            status: vehicle.assignment,
             notes: vehicle.notes,
           });
         }
@@ -278,14 +280,15 @@ export async function handleUpdateApparatusStatus(
     const sheetName = await detectMostRecentSheet(env, env.APPARATUS_STATUS_SHEET_ID);
 
     // Read current data to find the vehicle row
+    // Remember: Column A is empty, data is in B,C,D,E
     const values = await readSheet(
       env, 
       env.APPARATUS_STATUS_SHEET_ID, 
-      `${sheetName}!A2:D100`
+      `${sheetName}!A2:E100`
     );
     
-    // Find the row for this vehicle number
-    const rowIndex = values.findIndex(row => row[0] === body.vehicleNo);
+    // Find the row for this vehicle number (in column B = index 1)
+    const rowIndex = values.findIndex(row => row[1] === body.vehicleNo);
     
     if (rowIndex === -1) {
       return new Response(
@@ -317,18 +320,20 @@ export async function handleUpdateApparatusStatus(
       .replace(/\s+/g, '');
     
     // Build updated row with new Notes
+    // Columns: A (empty), B (Vehicle No), C (Designation), D (Assignment), E (Notes)
     const updatedRow = [
-      body.vehicleNo,
-      currentRow[1] || '',  // Preserve designation
-      currentRow[2] || 'In Service',  // Preserve status
-      `In service as ${unitCode}`,  // Update notes
+      '',                              // Column A - keep empty
+      body.vehicleNo,                  // Column B - Vehicle No
+      currentRow[2] || '',             // Column C - Preserve designation
+      currentRow[3] || 'In Service',   // Column D - Preserve assignment
+      `In service as ${unitCode}`,     // Column E - Update notes
     ];
 
     // Update the row in Google Sheet
     await writeSheet(
       env,
       env.APPARATUS_STATUS_SHEET_ID,
-      `${sheetName}!A${sheetRowNumber}:D${sheetRowNumber}`,
+      `${sheetName}!A${sheetRowNumber}:E${sheetRowNumber}`,
       [updatedRow]
     );
 
@@ -339,7 +344,7 @@ export async function handleUpdateApparatusStatus(
         success: true,
         unit: body.unit,
         vehicleNo: body.vehicleNo,
-        updatedNotes: updatedRow[3],
+        updatedNotes: updatedRow[4],
         sheetUsed: sheetName,
       }),
       {
