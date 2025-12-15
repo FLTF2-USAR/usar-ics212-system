@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon, Check, Menu, X, Home } from 'lucide-react';
+import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon, Check, Menu, X, Home, List } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
@@ -10,11 +10,12 @@ import { InventoryTab } from './inventory/InventoryTab';
 import { ApparatusStatusTab } from './ApparatusStatusTab';
 import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
-import { APPARATUS_LIST } from '../lib/config';
+import { APPARATUS_LIST, FORMS_MANAGEMENT_ENABLED } from '../lib/config';
 import type { Defect, EmailConfig, GitHubIssue } from '../types';
 import { fetchTasks, markTasksViewed } from '../lib/inventory';
+import FormsTab from './inventory/FormsTab';
 
-type TabType = 'home' | 'fleet' | 'activity' | 'supplies' | 'inventory' | 'apparatus-status' | 'notifications' | 'insights';
+type TabType = 'home' | 'fleet' | 'activity' | 'supplies' | 'inventory' | 'apparatus-status' | 'notifications' | 'insights' | 'forms';
 
 interface DailySubmissions {
   today: string[];
@@ -184,6 +185,32 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleTabChange = async (tab: TabType) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+
+    // When switching to inventory tab, mark tasks as viewed
+    if (tab === 'inventory' && unseenInventoryCount > 0) {
+      try {
+        await markTasksViewed();
+        setUnseenInventoryCount(0);
+      } catch (err) {
+        console.error('Error marking tasks as viewed:', err);
+        // Non-fatal error, continue anyway
+      }
+    }
+
+    // Load email config when switching to notifications tab
+    if (tab === 'notifications' && !emailConfig) {
+      loadEmailConfig();
+    }
+
+    // Reset critical alerts count when switching to insights tab
+    if (tab === 'insights') {
+      setCriticalAlertsCount(0);
+    }
+  };
+
   const loadEmailConfig = async () => {
     if (!passwordInput) return;
     
@@ -266,32 +293,6 @@ export const AdminDashboard: React.FC = () => {
       alert(`Failed to resolve defect: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsResolvingDefect(false);
-    }
-  };
-
-  const handleTabChange = async (tab: TabType) => {
-    setActiveTab(tab);
-    setIsMobileMenuOpen(false);
-
-    // When switching to inventory tab, mark tasks as viewed
-    if (tab === 'inventory' && unseenInventoryCount > 0) {
-      try {
-        await markTasksViewed();
-        setUnseenInventoryCount(0);
-      } catch (err) {
-        console.error('Error marking tasks as viewed:', err);
-        // Non-fatal error, continue anyway
-      }
-    }
-
-    // Load email config when switching to notifications tab
-    if (tab === 'notifications' && !emailConfig) {
-      loadEmailConfig();
-    }
-
-    // Reset critical alerts count when switching to insights tab
-    if (tab === 'insights') {
-      setCriticalAlertsCount(0);
     }
   };
 
@@ -398,7 +399,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Header - Responsive and Modern */}
       <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-b border-blue-700 shadow-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4">  
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
                 <img 
@@ -467,6 +468,12 @@ export const AdminDashboard: React.FC = () => {
                 badge={unseenInventoryCount}
                 isActive={activeTab === 'inventory'}
                 onClick={() => handleTabChange('inventory')}
+              />
+              <TabButton
+                icon={List}
+                label="Forms"
+                isActive={activeTab === 'forms'}
+                onClick={() => handleTabChange('forms')}
               />
               <TabButton
                 icon={Truck}
@@ -1104,6 +1111,11 @@ export const AdminDashboard: React.FC = () => {
           <InventoryTab />
         )}
 
+        {/* Forms Tab */}
+        {activeTab === 'forms' && (
+          <FormsTab adminPassword={passwordInput} />
+        )}
+
         {/* Apparatus Status Tab */}
         {activeTab === 'apparatus-status' && (
           <ApparatusStatusTab />
@@ -1353,6 +1365,7 @@ export const AdminDashboard: React.FC = () => {
             )}
           </div>
         )}
+
       </div>
     </div>
   );

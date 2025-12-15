@@ -40,6 +40,15 @@ import {
   handleGetVehicleChangeRequests,
   handleReviewVehicleChangeRequest
 } from './handlers/apparatus-status';
+import {
+  handleListApparatus,
+  handleGetFormByApparatus,
+  handleListForms,
+  handleGetTemplate,
+  handleCreateForm,
+  handleUpdateForm,
+  handleImportForm
+} from './handlers/forms';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -291,6 +300,48 @@ export default {
     if (imageMatch && request.method === 'GET') {
       const key = imageMatch[1];
       return await handleImageRetrieval(request, env, key);
+    }
+
+    // NEW: Forms endpoints
+    // List all apparatus names (public for login)
+    if (path === '/api/apparatus' && request.method === 'GET') {
+      return await handleListApparatus(request, env, corsHeaders);
+    }
+
+    // Get form for specific apparatus (public for inspections)
+    const apparatusMatch = path.match(/^\/api\/forms\/apparatus\/(.+)$/);
+    if (apparatusMatch && request.method === 'GET') {
+      const apparatusName = decodeURIComponent(apparatusMatch[1]);
+      return await handleGetFormByApparatus(request, env, corsHeaders, apparatusName);
+    }
+
+    // List all forms/templates (admin only)
+    if (path === '/api/forms' && request.method === 'GET') {
+      return await handleListForms(request, env, corsHeaders);
+    }
+
+    // Get specific template (admin only)
+    const templateMatch = path.match(/^\/api\/forms\/template\/(.+)$/);
+    if (templateMatch && request.method === 'GET') {
+      const templateId = decodeURIComponent(templateMatch[1]);
+      return await handleGetTemplate(request, env, corsHeaders, templateId);
+    }
+
+    // Create new apparatus/form (admin only)
+    if (path === '/api/forms' && request.method === 'POST') {
+      return await handleCreateForm(request, env, corsHeaders);
+    }
+
+    // Update form template (admin only)
+    const updateFormMatch = path.match(/^\/api\/forms\/(.+)$/);
+    if (updateFormMatch && request.method === 'PUT' && !updateFormMatch[1].includes('/')) {
+      const templateId = decodeURIComponent(updateFormMatch[1]);
+      return await handleUpdateForm(request, env, corsHeaders, templateId);
+    }
+
+    // AI Import endpoint (admin only)
+    if (path === '/api/forms/import' && request.method === 'POST') {
+      return await handleImportForm(request, env, corsHeaders);
     }
 
     // Route to appropriate handler

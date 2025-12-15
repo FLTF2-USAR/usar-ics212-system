@@ -6,6 +6,13 @@ import type { Apparatus } from '../types';
 export const WORKER_URL = 'https://mbfd-github-proxy.pdarleyjr.workers.dev';
 
 /**
+ * Feature flag for dynamic forms management
+ * Set to false initially for safe rollout
+ * When enabled, forms are loaded from D1 database instead of static JSON files
+ */
+export const FORMS_MANAGEMENT_ENABLED = true;
+
+/**
  * List of all apparatus in the MBFD fleet
  * Update this list when new apparatus are added to the system
  */

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
-import { APPARATUS_LIST } from '../lib/config';
+import { APPARATUS_LIST, FORMS_MANAGEMENT_ENABLED, WORKER_URL } from '../lib/config';
 import { useApparatusStatus } from '../hooks/useApparatusStatus';
 import type { Rank, Shift, User, Apparatus } from '../types';
 
@@ -235,6 +235,25 @@ export const LoginScreen: React.FC = () => {
     unitNumber: 'R1',
   });
   const [validationError, setValidationError] = useState('');
+  const [apparatusOptions, setApparatusOptions] = useState<string[]>(APPARATUS_LIST);
+
+  // Fetch dynamic apparatus list if feature is enabled
+  useEffect(() => {
+    if (FORMS_MANAGEMENT_ENABLED) {
+      fetch(`${WORKER_URL}/api/apparatus`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.apparatus && data.apparatus.length > 0) {
+            setApparatusOptions(data.apparatus);
+            console.log('Loaded apparatus list from API');
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch apparatus list:', err);
+          // Falls back to APPARATUS_LIST if fetch fails
+        });
+    }
+  }, []);
 
   // Auto-populate vehicle number when apparatus changes (with debouncing to prevent freezes)
   useEffect(() => {
@@ -344,7 +363,7 @@ export const LoginScreen: React.FC = () => {
                   }}
                   className="w-full px-4 py-4 rounded-xl border-2 border-gray-300 focus:ring-4 focus:ring-blue-400 focus:border-blue-600 outline-none appearance-none bg-white transition-all text-base font-semibold text-gray-900"
                 >
-                  {APPARATUS_LIST.map((apparatus) => (
+                  {apparatusOptions.map((apparatus) => (
                     <option key={apparatus} value={apparatus}>
                       {apparatus}
                     </option>
