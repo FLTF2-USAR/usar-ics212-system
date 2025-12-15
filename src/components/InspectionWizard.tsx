@@ -10,6 +10,7 @@ import { createTasks, submitVehicleChangeRequest } from '../lib/inventory';
 import { useDeviceDetection } from '../hooks/useDeviceDetection';
 import { useLocalStorage, useFieldHistory } from '../hooks/useLocalStorage';
 import { useApparatusStatus } from '../hooks/useApparatusStatus';
+import { FORMS_MANAGEMENT_ENABLED, WORKER_URL } from '../lib/config';
 import type { User, ChecklistData, ChecklistItem, GitHubIssue, ItemStatus, OfficerChecklistItem } from '../types';
 
 export const InspectionWizard: React.FC = () => {
@@ -68,25 +69,52 @@ export const InspectionWizard: React.FC = () => {
 
   const loadChecklistData = async (userData: User) => {
     try {
-      // Determine which checklist to load based on apparatus type
-      let checklistFile: string;
+      let data: ChecklistData | null = null;
       
-      if (userData.apparatus.startsWith('Engine')) {
-        checklistFile = 'engine_checklist.json';
-      } else if (userData.apparatus === 'Ladder 1') {
-        checklistFile = 'ladder1_checklist.json';
-      } else if (userData.apparatus === 'Ladder 3') {
-        checklistFile = 'ladder3_checklist.json';
-      } else if (userData.apparatus === 'Rope Inventory') {
-        checklistFile = 'rope_checklist.json';
-      } else {
-        // All Rescue units use the same checklist
-        checklistFile = 'rescue_checklist.json';
+      // Try loading from dynamic forms API if feature is enabled
+      if (FORMS_MANAGEMENT_ENABLED) {
+        try {
+          const res = await fetch(`${WORKER_URL}/api/forms/apparatus/${encodeURIComponent(userData.apparatus)}`);
+          if (res.ok) {
+            data = await res.json();
+            console.log('Loaded checklist from dynamic forms API');
+          } else {
+            console.warn('Dynamic forms API failed, falling back to static files');
+          }
+        } catch (error) {
+          console.error('Dynamic form load failed, using static fallback:', error);
+        }
       }
       
-      // Load checklist JSON
-      const response = await fetch(`/mbfd-checkout-system/data/${checklistFile}`);
-      const data: ChecklistData = await response.json();
+      // Fallback to static files if dynamic loading failed or is disabled
+      if (!data) {
+        // Determine which checklist to load based on apparatus type
+        let checklistFile: string;
+        
+        if (userData.apparatus.startsWith('Engine')) {
+          checklistFile = 'engine_checklist.json';
+        } else if (userData.apparatus === 'Ladder 1') {
+          checklistFile = 'ladder1_checklist.json';
+        } else if (userData.apparatus === 'Ladder 3') {
+          checklistFile = 'ladder3_checklist.json';
+        } else if (userData.apparatus === 'Rope Inventory') {
+          checklistFile = 'rope_checklist.json';
+        } else {
+          // All Rescue units use the same checklist
+          checklistFile = 'rescue_checklist.json';
+        }
+        
+        // Load checklist JSON
+        const response = await fetch(`/mbfd-checkout-system/data/${checklistFile}`);
+        data = await response.json();
+        console.log('Loaded checklist from static file:', checklistFile);
+      }
+      
+      // If still no data, throw error
+      if (!data) {
+        throw new Error('Failed to load checklist data');
+      }
+      
       setChecklist(data);
 
       // Initialize all items with 'present' status
@@ -371,8 +399,8 @@ Defects Found: ${submissionDefectCount}
 
 ${officerItems.length > 0 ? `
 Officer Checklist:
-${officerItems.map(item => `- ${item.name}: ${item.checked ? '✓' : '✗'} ${item.value ? `(${item.value})` : ''}`).join('\n')}
-` : ''}
+${officerItems.map(item => `- ${item.name}: ${item.checked ? '✓' : '✗'} ${item.value ? `(${item.value})` : ''}`).join('\n')}`
+ : ''}
 
 This inspection has been recorded successfully.
 ${submissionDefectCount > 0 ? '\nIssues have been logged and will be reviewed by maintenance.' : '\nNo issues were found during this inspection.'}
