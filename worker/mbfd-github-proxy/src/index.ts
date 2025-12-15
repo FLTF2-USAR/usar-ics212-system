@@ -28,7 +28,7 @@ import { handleGetEmailConfig, handleUpdateEmailConfig } from './handlers/config
 import { handleManualDigest } from './handlers/digest';
 import { handleAnalyze } from './handlers/analyze';
 import { handleGetInventory, handleAdjustInventory } from './handlers/inventory';
-import { handleCreateTasks, handleGetTasks, handleUpdateTask } from './handlers/tasks';
+import { handleCreateTasks, handleGetTasks, handleUpdateTask, handleMarkTasksViewed } from './handlers/tasks';
 import { handleAIInsights, handleGetInsights } from './handlers/ai-insights';
 import { handleSendEmail } from './handlers/send-email';
 import { handleCreateReceipt, handleGetReceipt } from './handlers/receipts';
@@ -245,11 +245,19 @@ export default {
       return await handleCreateTasks(request, env, corsHeaders);
     }
 
+    // NEW: Mark inventory tasks as viewed by admin
+    if (path === '/api/tasks/mark-viewed' && request.method === 'POST') {
+      return await handleMarkTasksViewed(request, env, corsHeaders);
+    }
+
     // Task update endpoint - extract ID from path
     const taskMatch = path.match(/^\/api\/tasks\/(.+)$/);
     if (taskMatch && request.method === 'PATCH') {
       const taskId = taskMatch[1];
-      return await handleUpdateTask(request, env, corsHeaders, taskId);
+      // Make sure 'mark-viewed' doesn't match this regex
+      if (taskId !== 'mark-viewed') {
+        return await handleUpdateTask(request, env, corsHeaders, taskId);
+      }
     }
 
     // NEW: AI Insights endpoints (admin only)

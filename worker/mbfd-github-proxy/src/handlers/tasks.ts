@@ -416,10 +416,28 @@ export async function handleGetTasks(
       notes: row.notes,
     }));
 
+    // Calculate unseen tasks count (tasks created after last admin view)
+    let unseenCount = 0;
+    try {
+      const lastViewedTimestamp = await env.MBFD_CONFIG.get('inventory_last_viewed');
+      if (lastViewedTimestamp) {
+        unseenCount = tasks.filter(task => 
+          new Date(task.createdAt) > new Date(lastViewedTimestamp)
+        ).length;
+      } else {
+        // If never viewed, all pending tasks are unseen
+        unseenCount = tasks.length;
+      }
+    } catch (err) {
+      console.error('Error calculating unseen count:', err);
+      // Non-fatal, continue without unseen count
+    }
+
     return new Response(
       JSON.stringify({
         tasks,
         count: tasks.length,
+        unseenCount,
       }),
       {
         status: 200,
@@ -434,6 +452,65 @@ export async function handleGetTasks(
     return new Response(
       JSON.stringify({
         error: 'Failed to fetch tasks',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
+    );
+  }
+}
+
+/**
+ * POST /api/tasks/mark-viewed - Mark inventory tasks as viewed by admin
+ */
+export async function handleMarkTasksViewed(
+  request: Request,
+  env: Env,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    // Verify admin authentication
+    const password = request.headers.get('X-Admin-Password');
+    if (password !== env.ADMIN_PASSWORD) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized. Invalid admin password.' }),
+        {
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    // Store current timestamp in KV
+    const timestamp = new Date().toISOString();
+    await env.MBFD_CONFIG.put('inventory_last_viewed', timestamp);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        viewedAt: timestamp,
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      }
+    );
+  } catch (error) {
+    console.error('Error marking tasks as viewed:', error);
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to mark tasks as viewed',
         details: error instanceof Error ? error.message : 'Unknown error',
       }),
       {
