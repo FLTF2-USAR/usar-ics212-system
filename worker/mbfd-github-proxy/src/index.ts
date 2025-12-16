@@ -32,7 +32,6 @@ import { handleCreateTasks, handleGetTasks, handleUpdateTask, handleMarkTasksVie
 import { handleAIInsights, handleGetInsights } from './handlers/ai-insights';
 import { handleSendEmail } from './handlers/send-email';
 import { handleCreateReceipt, handleGetReceipt } from './handlers/receipts';
-import { handleImageUpload, handleImageRetrieval } from './handlers/uploads';
 import { 
   handleGetApparatusStatus, 
   handleUpdateApparatusStatus,
@@ -76,6 +75,20 @@ export interface Env {
   // Receipt hosting configuration
   MBFD_HOSTNAME?: string;
   RECEIPT_TTL_DAYS?: string;
+}
+
+interface GitHubErrorResponse {
+  message: string;
+  documentation_url?: string;
+  errors?: Array<{
+    resource: string;
+    field: string;
+    code: string;
+  }>;
+}
+
+interface RequestBody {
+  [key: string]: unknown;
 }
 
 const REPO_OWNER = 'pdarleyjr';
@@ -450,7 +463,7 @@ async function handleIssuesRequest(
       });
 
       if (!response.ok) {
-        const errorData: any = await response.json().catch(() => ({ message: 'Unknown error' }));
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' })) as GitHubErrorResponse;
         console.error('GitHub API Error fetching issue:', issueNumber, response.status, errorData);
         return jsonResponse(
           { 
@@ -482,7 +495,7 @@ async function handleIssuesRequest(
 
     // Create issue (no caching for POST)
     if (request.method === 'POST' && path === '') {
-      const body: any = await request.json();
+      const body: RequestBody = await request.json();
       
       // INPUT VALIDATION: Validate required fields and sanitize inputs
       if (!body.title || typeof body.title !== 'string') {
@@ -556,7 +569,7 @@ async function handleIssuesRequest(
       });
 
       if (!response.ok) {
-        const errorData: any = await response.json().catch(() => ({ message: 'Unknown error' }));
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' })) as GitHubErrorResponse;
         console.error('GitHub API Error creating issue:', response.status, errorData);
         return jsonResponse(
           { 
@@ -597,7 +610,7 @@ async function handleIssuesRequest(
       });
 
       if (!response.ok) {
-        const errorData: any = await response.json().catch(() => ({ message: 'Unknown error' }));
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' })) as GitHubErrorResponse;
         console.error('GitHub API Error updating issue:', issueNumber, response.status, errorData);
       } else {
         console.log(`Updated issue #${issueNumber}`);
@@ -628,7 +641,7 @@ async function handleIssuesRequest(
       });
 
       if (!response.ok) {
-        const errorData: any = await response.json().catch(() => ({ message: 'Unknown error' }));
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' })) as GitHubErrorResponse;
         console.error('GitHub API Error adding comment:', issueNumber, response.status, errorData);
       } else {
         console.log(`Added comment to issue #${issueNumber}`);
