@@ -160,14 +160,14 @@ export async function handleListForms(
         id: (template as any).id,
         name: (template as any).name,
         modified_at: (template as any).modified_at,
-        apparatus: []
+        apparatus_list: []  // Changed from 'apparatus' to 'apparatus_list' to match frontend expectation
       });
     }
 
     for (const app of apparatus.results) {
       const templateId = (app as any).template_id;
       if (templateMap.has(templateId)) {
-        templateMap.get(templateId)!.apparatus.push((app as any).name);
+        templateMap.get(templateId)!.apparatus_list.push((app as any).name);  // Changed to apparatus_list
       }
     }
 

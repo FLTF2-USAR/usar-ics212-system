@@ -112,14 +112,17 @@ export const AdminDashboard: React.FC = () => {
     try {
       setIsLoading(true);
       
-      // Fetch all defects
+      // Fetch all defects (ONLY OPEN defects from GitHub Issues API)
       const allDefects = await githubService.getAllDefects();
+      console.log('📊 Loaded defects:', allDefects.length, allDefects);
       
-      // Compute fleet status from defects
+      // Compute fleet status from ONLY the open defects we just fetched
       const status = githubService.computeFleetStatus(allDefects);
+      console.log('📊 Computed fleet status:', Object.fromEntries(status));
       
-      setFleetStatus(status);
+      // Update state - this should trigger re-render with correct colors
       setDefects(allDefects);
+      setFleetStatus(status);
       
       // Fetch daily submissions and low stock items
       try {

@@ -75,6 +75,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword }) =
   const loadFleetData = async () => {
     try {
       const allDefects = await githubService.getAllDefects();
+      console.log('🏠 Dashboard Home: Loaded defects from API:', allDefects.length, allDefects);
       setDefects(allDefects);
       
       // Generate insights from defects
@@ -120,6 +121,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword }) =
       const affectedApparatus = apparatusDefectCounts.size;
       const healthScore = Math.max(0, 100 - (affectedApparatus * 7) - (allDefects.length * 2));
       setFleetHealthScore(healthScore);
+      console.log('🏠 Dashboard Home: Fleet health score:', healthScore);
       
       if (healthScore >= 90 && allDefects.length === 0) {
         insights.push({
@@ -134,6 +136,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword }) =
       }
       
       setFleetInsights(insights);
+      console.log('🏠 Dashboard Home: Generated insights:', insights);
     } catch (error) {
       console.error('Error loading fleet data:', error);
       // Set empty insights on error - show graceful degradation
@@ -389,11 +392,11 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword }) =
                             <p className="font-semibold text-green-900 text-sm truncate">{suggestion.item}</p>
                             <p className="text-green-700 text-xs mt-1">{suggestion.reason}</p>
                           </div>
-                          <span className={`px-2 py-1 rounded text-xs font-bold whitespace-nowrap ${
+                          <span className={`px-2 py-1 rounded text-xs font-bold whitespace-nowrap ${(
                             suggestion.urgency?.toLowerCase() === 'high' ? 'bg-red-100 text-red-800' :
                             suggestion.urgency?.toLowerCase() === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-800'
-                          }`}>
+                          )}`}>
                             {suggestion.urgency || 'Low'}
                           </span>
                         </div>
