@@ -12,15 +12,18 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FormsList } from './FormsList';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { VehicleManagement } from './VehicleManagement';
 import { TouchFeedback } from '../mobile/TouchFeedback';
+import { Home } from 'lucide-react';
 
 type TabView = 'list' | 'analytics' | 'vehicles';
 
 export function ICS212AdminDashboard() {
   const [currentView, setCurrentView] = useState<TabView>('list');
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -28,17 +31,29 @@ export function ICS212AdminDashboard() {
       <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-md">
         <div className="px-4 py-4">
           <div className="flex items-center gap-3">
-            <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <img 
+              src="/taskforce-io-logo.png" 
+              alt="TASKFORCE IO" 
+              className="w-10 h-10 object-contain"
+            />
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                ICS-212 Admin
+                TASKFORCE IO Admin
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Vehicle Safety Inspections
               </p>
             </div>
+            <TouchFeedback>
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                title="Return to Home"
+              >
+                <Home className="w-4 h-4" />
+                <span className="hidden sm:inline">Home</span>
+              </button>
+            </TouchFeedback>
           </div>
         </div>
         

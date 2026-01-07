@@ -2,45 +2,46 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TouchFeedback } from './mobile/TouchFeedback';
-import { Lock } from 'lucide-react';
+import { Lock, ClipboardList, Settings } from 'lucide-react';
 
 export function HomePage() {
   const navigate = useNavigate();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  const handleICS218Access = () => {
+  const handleAdminAccess = () => {
     // Check if user already has access token
-    const token = sessionStorage.getItem('ics218_access_token');
+    const token = sessionStorage.getItem('admin_access_token');
     if (token) {
-      navigate('/ics218');
+      navigate('/admin')
     } else {
       setShowPasswordModal(true);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full">
+    <div className="min-h-screen bg-gradient-to-br from-[#0066FF] via-[#0059E6] to-[#0052CC] flex items-center justify-center p-4">
+      <div className="max-w-7xl w-full mx-auto px-4">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-12"
         >
-          <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
-            <span className="text-white text-4xl font-bold">US</span>
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/taskforce-io-logo.png" 
+              alt="TASKFORCE IO" 
+              className="w-48 h-48 md:w-56 md:h-56 object-contain"
+            />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">
-            USAR ICS Forms Portal
-          </h1>
-          <p className="text-lg text-blue-100">
-            Select a form to begin
+          <p className="text-xl text-blue-100">
+            Emergency Response Document Management
           </p>
         </motion.div>
 
         {/* Form Cards Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* ICS 212 Card */}
+        <div className="grid md:grid-cols-2 gap-8 mb-8">
+          {/* Forms Hub Card */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -48,14 +49,12 @@ export function HomePage() {
           >
             <TouchFeedback>
               <button
-                onClick={() => navigate('/form')}
+                onClick={() => navigate('/forms')}
                 className="w-full h-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 text-left hover:shadow-3xl hover:scale-[1.02] transition-all duration-200"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-3">
-                    <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <ClipboardList className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                   </div>
                   <span className="text-sm font-medium text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full">
                     Open Access
@@ -63,25 +62,24 @@ export function HomePage() {
                 </div>
                 
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  ICS 212
+                  Forms Hub
                 </h2>
                 <p className="text-lg text-gray-700 dark:text-gray-300 mb-4">
-                  Vehicle Safety Inspection
+                  Access all available forms
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                  Complete official ICS-212 WF (Wildfire) vehicle safety inspection forms 
-                  with digital signatures and automatic PDF generation.
+                  Create and manage ICS 212 and ICS 218 forms with digital signatures and automatic PDF generation.
                 </p>
                 
                 <div className="flex items-center text-blue-600 dark:text-blue-400 font-semibold">
-                  <span>Start Inspection</span>
+                  <span>View Forms</span>
                   <span className="ml-2 text-xl">→</span>
                 </div>
               </button>
             </TouchFeedback>
           </motion.div>
 
-          {/* ICS 218 Card */}
+          {/* Admin Dashboard Card */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -89,57 +87,37 @@ export function HomePage() {
           >
             <TouchFeedback>
               <button
-                onClick={handleICS218Access}
+                onClick={handleAdminAccess}
                 className="w-full h-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 text-left hover:shadow-3xl hover:scale-[1.02] transition-all duration-200"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
-                    <svg className="w-8 h-8 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
+                  <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-3">
+                    <Settings className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <span className="text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-3 py-1 rounded-full flex items-center gap-1">
+                  <span className="text-sm font-medium text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-3 py-1 rounded-full flex items-center gap-1">
                     <Lock className="w-3 h-3" />
                     Password Required
                   </span>
                 </div>
                 
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  ICS 218
+                  Admin Dashboard
                 </h2>
                 <p className="text-lg text-gray-700 dark:text-gray-300 mb-4">
-                  Support Vehicle/Equipment Inventory
+                  Management & Analytics
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                  Track and manage deployment of support vehicles and equipment for 
-                  incident operations with detailed inventory records.
+                  Manage forms, vehicles, and analytics for incident operations.
                 </p>
                 
-                <div className="flex items-center text-orange-600 dark:text-orange-400 font-semibold">
-                  <span>Access Form</span>
+                <div className="flex items-center text-purple-600 dark:text-purple-400 font-semibold">
+                  <span>Access Dashboard</span>
                   <span className="ml-2 text-xl">→</span>
                 </div>
               </button>
             </TouchFeedback>
           </motion.div>
         </div>
-
-        {/* Admin Dashboard Link */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="text-center"
-        >
-          <TouchFeedback>
-            <button
-              onClick={() => navigate('/admin')}
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-medium py-3 px-8 rounded-xl transition-all duration-200 border border-white/20"
-            >
-              Admin Dashboard
-            </button>
-          </TouchFeedback>
-        </motion.div>
 
         {/* Footer Info */}
         <motion.div
@@ -164,7 +142,7 @@ export function HomePage() {
           onClose={() => setShowPasswordModal(false)}
           onSuccess={() => {
             setShowPasswordModal(false);
-            navigate('/ics218');
+            navigate('/admin')
           }}
         />
       )}
@@ -186,12 +164,12 @@ function PasswordModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     try {
       // For Phase 1, we'll do client-side validation
       // Phase 3 will implement proper backend validation
-      const correctPassword = 'ICS218Deploy2026!';
+      const correctPassword = 'AdminPass2026!';
       
       if (password === correctPassword) {
         // Store access token in session storage
-        const token = `session_ics218_${Date.now()}`;
-        sessionStorage.setItem('ics218_access_token', token);
+        const token = `session_admin_${Date.now()}`;
+        sessionStorage.setItem('admin_access_token', token);
         onSuccess();
       } else {
         setError('Invalid password. Please try again.');
@@ -212,11 +190,11 @@ function PasswordModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-2">
-              <Lock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-2">
+              <Lock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              ICS 218 Access
+              Admin Access
             </h2>
           </div>
           <button
@@ -230,7 +208,7 @@ function PasswordModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         </div>
 
         <p className="text-gray-600 dark:text-gray-400 mb-6">
-          This form requires a password to access. Please enter the ICS 218 deployment password.
+          This dashboard requires a password to access. Please enter the admin password.
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -242,7 +220,7 @@ function PasswordModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               placeholder="Enter password"
               autoFocus
             />
@@ -267,9 +245,9 @@ function PasswordModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             <button
               type="submit"
               disabled={isValidating || !password}
-              className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:cursor-not-allowed"
+              className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:cursor-not-allowed"
             >
-              {isValidating ? 'Validating...' : 'Access Form'}
+              {isValidating ? 'Validating...' : 'Access Dashboard'}
             </button>
           </div>
         </form>

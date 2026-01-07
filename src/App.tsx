@@ -7,6 +7,7 @@ import { ICS218Auth } from './components/ics218/ICS218Auth';
 
 // Lazy load route components for code splitting
 const HomePage = lazy(() => import('./components/HomePage'));
+const FormsHub = lazy(() => import('./components/FormsHub'));
 const ICS212Form = lazy(() => import('./components/ICS212Form'));
 const ICS218Form = lazy(() => import('./components/ics218/ICS218Form'));
 const ICS212AdminDashboard = lazy(() => import('./components/admin/ICS212AdminDashboard').then(m => ({ default: m.ICS212AdminDashboard })));
@@ -39,6 +40,7 @@ function App() {
           <Routes>
             {/* Main Routes */}
             <Route path="/" element={<HomePage />} />
+            <Route path="/forms" element={<FormsHub />} />
             <Route path="/form" element={<ICS212Form />} />
             <Route 
               path="/ics218" 
