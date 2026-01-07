@@ -11,6 +11,8 @@
 
 import type { Env } from '../index';
 import { generateICS212PDF } from '../pdf/ics212-generator';
+import JSZip from 'jszip';
+import { sendEmailWithPDF, generateEmailTemplate } from '../email/gmail';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -79,7 +81,7 @@ interface AnalyticsResponse {
   formsThisWeek: number;
   holdRate: number;
   releaseRate: number;
-  topVehicles: Array<{ vehicleId: string; count: number; lastInspection: string }>;
+  topVehicles: Array<{ vehicleId: string; count: number; lastInspection: string }>; 
   safetyItemFailures: Array<{ item: string; count: number }>; 
   formsPerDay: Array<{ date: string; count: number }>; 
   recentForms: ICS212FormSummary[];
@@ -116,6 +118,28 @@ export async function handleICS212Admin(
       return await handleFormDetail(formId, env, corsHeaders);
     }
 
+    // PATCH /api/ics212/forms/:formId - Update form (NEW)
+    if (path.match(/^\/api\/ics212\/forms\/[^/]+$/) && request.method === 'PATCH') {
+      const formId = path.split('/').pop()!;
+      return await handleUpdateForm(formId, request, env, corsHeaders);
+    }
+
+    // POST /api/ics212/forms/:formId/regenerate-pdf - Regenerate PDF (NEW)
+    if (path.match(/^\/api\/ics212\/forms\/[^/]+\/regenerate-pdf$/) && request.method === 'POST') {
+      const formId = path.split('/')[4];
+      return await handleRegeneratePDF(formId, env, corsHeaders);
+    }
+
+    // POST /api/ics212/forms/batch-download - Batch download PDFs as ZIP
+    if (path === '/api/ics212/forms/batch-download' && request.method === 'POST') {
+      return await handleBatchDownload(request, env, corsHeaders);
+    }
+
+    // POST /api/ics212/forms/batch-email - Batch email PDFs
+    if (path === '/api/ics212/forms/batch-email' && request.method === 'POST') {
+      return await handleBatchEmail(request, env, corsHeaders);
+    }
+
     // GET /api/ics212/analytics - Dashboard statistics
     if (path === '/api/ics212/analytics' && request.method === 'GET') {
       return await handleAnalytics(env, corsHeaders);
@@ -140,7 +164,7 @@ export async function handleICS212Admin(
   } catch (error) {
     console.error('ICS-212 Admin API error:', error);
     return jsonResponse(
-      { 
+      {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -462,12 +486,12 @@ async function handleAnalytics(
     holdRate: totalForms > 0 ? (holdCount / totalForms) * 100 : 0,
     releaseRate: totalForms > 0 ? ((totalForms - holdCount) / totalForms) * 100 : 0,
     topVehicles: topVehicles.results as unknown as Array<{ vehicleId: string; count: number; lastInspection: string }>,
-
+    
     safetyItemFailures: Object.entries(failureCounts)
       .map(([item, count]) => ({ item, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10),
-    formsPerDay: formsPerDay.results as Array<{ date: string; count: number }>,
+    formsPerDay: formsPerDay.results as Array<{ date: string; count: number }>, 
     recentForms: recentForms.results as unknown as ICS212FormSummary[]
   };
 
@@ -480,8 +504,8 @@ async function handleAnalytics(
  */
 async function handleEmailForm(
   formId: string,
-  request: Request,
-  env: Env,
+  request: Request, 
+  env: Env, 
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   const db = env.DB || env.SUPPLY_DB;
@@ -596,6 +620,520 @@ async function handleDeleteForm(
     { success: true, message: 'Form deleted successfully' },
     { status: 200, headers: corsHeaders }
   );
+}
+
+/**
+ * PATCH /api/ics212/forms/:formId
+ * Update existing form submission
+ */
+async function handleUpdateForm(
+  formId: string,
+  request: Request,
+  env: Env,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  const db = env.DB || env.SUPPLY_DB;
+  if (!db) {
+    return jsonResponse(
+      { error: 'Database not available' },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+
+  // Get updated data from request
+  const updates: any = await request.json();
+
+  // Validate formId exists
+  const existingForm = await db
+    .prepare('SELECT * FROM ics212_forms WHERE form_id = ?')
+    .bind(formId)
+    .first<ICS212FormDetail>();
+
+  if (!existingForm) {
+    return jsonResponse(
+      { error: 'Form not found' },
+      { status: 404, headers: corsHeaders }
+    );
+  }
+
+  // Build dynamic UPDATE query based on provided fields
+  const allowedFields = [
+    'incident_name',
+    'order_no',
+    'vehicle_license_no',
+    'agency_reg_unit',
+    'vehicle_type',
+    'odometer_reading',
+    'vehicle_id_no',
+    'inspection_items', // will be JSON stringified
+    'additional_comments',
+    'release_decision',
+  ];
+
+  const updateFields: string[] = [];
+  const updateValues: any[] = [];
+
+  // Process each allowed field
+  for (const field of allowedFields) {
+    if (updates[field] !== undefined) {
+      updateFields.push(`${field} = ?`);
+      
+      // Special handling for inspection_items (must be JSON)
+      if (field === 'inspection_items') {
+        updateValues.push(typeof updates[field] === 'string' ? updates[field] : JSON.stringify(updates[field]));
+      } else {
+        updateValues.push(updates[field]);
+      }
+    }
+  }
+
+  if (updateFields.length === 0) {
+    return jsonResponse(
+      { error: 'No valid fields to update' },
+      { status: 400, headers: corsHeaders }
+    );
+  }
+
+  // Add updated_at timestamp
+  updateFields.push('updated_at = CURRENT_TIMESTAMP');
+
+  // Build and execute UPDATE query
+  const updateQuery = `
+    UPDATE ics212_forms 
+    SET ${updateFields.join(', ')}
+    WHERE form_id = ?
+  `;
+  
+  updateValues.push(formId);
+
+  try {
+    await db.prepare(updateQuery).bind(...updateValues).run();
+
+    // Fetch updated form
+    const updatedForm = await db
+      .prepare('SELECT * FROM ics212_forms WHERE form_id = ?')
+      .bind(formId)
+      .first<ICS212FormDetail>();
+
+    return jsonResponse(
+      { 
+        success: true, 
+        message: 'Form updated successfully',
+        form: updatedForm 
+      },
+      { status: 200, headers: corsHeaders }
+    );
+  } catch (error) {
+    console.error('Failed to update form:', error);
+    return jsonResponse(
+      { 
+        error: 'Failed to update form',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
+/**
+ * POST /api/ics212/forms/:formId/regenerate-pdf
+ * Regenerate PDF for existing form submission
+ */
+async function handleRegeneratePDF(
+  formId: string,
+  env: Env,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  const db = env.DB || env.SUPPLY_DB;
+  if (!db) {
+    return jsonResponse(
+      { error: 'Database not available' },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+
+  // Get form data
+  const form = await db
+    .prepare('SELECT * FROM ics212_forms WHERE form_id = ?')
+    .bind(formId)
+    .first<ICS212FormDetail>();
+
+  if (!form) {
+    return jsonResponse(
+      { error: 'Form not found' },
+      { status: 404, headers: corsHeaders }
+    );
+  }
+
+  try {
+    console.log(`Regenerating PDF for form ${formId}...`);
+
+    // Parse JSON fields
+    const inspectionItems = JSON.parse(form.inspection_items);
+    const inspectorSignature = form.inspector_signature ? JSON.parse(form.inspector_signature) : undefined;
+    const operatorSignature = form.operator_signature ? JSON.parse(form.operator_signature) : undefined;
+
+    // Prepare form data for PDF generation
+    const formData = {
+      formId: form.form_id,
+      incidentName: form.incident_name,
+      orderNo: form.order_no || undefined,
+      vehicleLicenseNo: form.vehicle_license_no,
+      agencyRegUnit: form.agency_reg_unit,
+      vehicleType: form.vehicle_type,
+      odometerReading: form.odometer_reading,
+      vehicleIdNo: form.vehicle_id_no,
+      inspectionItems,
+      additionalComments: form.additional_comments || undefined,
+      releaseStatus: form.release_decision as 'hold' | 'release',
+      inspectorDate: form.inspector_date,
+      inspectorTime: form.inspector_time,
+      inspectorNamePrint: form.inspector_name_print,
+      inspectorSignature,
+      operatorDate: form.operator_date || undefined,
+      operatorTime: form.operator_time || undefined,
+      operatorNamePrint: form.operator_name_print || undefined,
+      operatorSignature,
+    };
+
+    // Generate PDF using existing generator
+    const pdfResult = await generateICS212PDF({
+      formData: formData as any,
+      includeSignatures: true,
+    });
+
+    console.log(`PDF regenerated: ${(pdfResult.size / 1024).toFixed(2)} KB`);
+
+    // Upload to R2
+    const { uploadPDFToR2 } = await import('../storage/r2-client');
+    const uploadResult = await uploadPDFToR2(env, {
+      filename: pdfResult.filename,
+      buffer: pdfResult.buffer,
+      metadata: {
+        formId: form.form_id,
+        vehicleId: form.vehicle_id_no,
+        releaseDecision: form.release_decision,
+        incidentName: form.incident_name,
+        regenerated: 'true',
+      },
+    });
+
+    if (!uploadResult.success) {
+      throw new Error(`PDF upload failed: ${uploadResult.error}`);
+    }
+
+    // Update database with new PDF URL
+    await db
+      .prepare('UPDATE ics212_forms SET pdf_url = ?, pdf_filename = ?, updated_at = CURRENT_TIMESTAMP WHERE form_id = ?')
+      .bind(uploadResult.url, pdfResult.filename, formId)
+      .run();
+
+    return jsonResponse(
+      { 
+        success: true,
+        message: 'PDF regenerated successfully',
+        pdfUrl: uploadResult.url,
+        filename: pdfResult.filename
+      },
+      { status: 200, headers: corsHeaders }
+    );
+  } catch (error) {
+    console.error('PDF regeneration error:', error);
+    return jsonResponse(
+      { 
+        error: 'Failed to regenerate PDF',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
+/**
+ * POST /api/ics212/forms/batch-download
+ * Download multiple PDFs as a ZIP file
+ */
+async function handleBatchDownload(
+  request: Request,
+  env: Env,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  const db = env.DB || env.SUPPLY_DB;
+  if (!db) {
+    return jsonResponse(
+      { error: 'Database not available' },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+
+  try {
+    const body = await request.json() as { formIds: string[] };
+    const { formIds } = body;
+
+    // Validation
+    if (!formIds || !Array.isArray(formIds) || formIds.length === 0) {
+      return jsonResponse(
+        { error: 'formIds array is required' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    if (formIds.length > 50) {
+      return jsonResponse(
+        { error: 'Maximum 50 forms allowed per batch download' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    console.log(`[BATCH DOWNLOAD] Fetching ${formIds.length} forms...`);
+
+    // Fetch forms from database to get PDF filenames
+    const placeholders = formIds.map(() => '?').join(',');
+    const query = `SELECT form_id, pdf_url, pdf_filename FROM ics212_forms WHERE form_id IN (${placeholders})`;
+    const { results } = await db.prepare(query).bind(...formIds).all();
+
+    if (!results || results.length === 0) {
+      return jsonResponse(
+        { error: 'No forms found with the provided IDs' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
+
+    console.log(`[BATCH DOWNLOAD] Found ${results.length} forms in database`);
+
+    // Create ZIP
+    const zip = new JSZip();
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Check if R2 bucket is available
+    if (!env.USAR_FORMS) {
+      return jsonResponse(
+        { error: 'R2 storage not configured' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    // Fetch each PDF from R2 and add to ZIP
+    for (const form of results as any[]) {
+      if (!form.pdf_filename) {
+        console.warn(`[BATCH DOWNLOAD] Form ${form.form_id} has no PDF filename`);
+        failureCount++;
+        continue;
+      }
+
+      try {
+        // Fetch PDF from R2
+        console.log(`[BATCH DOWNLOAD] Fetching PDF: ${form.pdf_filename}`);
+        const pdfObject = await env.USAR_FORMS.get(form.pdf_filename);
+        
+        if (pdfObject) {
+          const pdfBuffer = await pdfObject.arrayBuffer();
+          // Add PDF to ZIP with clean filename
+          const zipFilename = `${form.form_id}_ICS212.pdf`;
+          zip.file(zipFilename, pdfBuffer);
+          successCount++;
+          console.log(`[BATCH DOWNLOAD] Added ${zipFilename} (${(pdfBuffer.byteLength / 1024).toFixed(2)} KB)`);
+        } else {
+          console.warn(`[BATCH DOWNLOAD] PDF not found in R2: ${form.pdf_filename}`);
+          failureCount++;
+        }
+      } catch (error) {
+        console.error(`[BATCH DOWNLOAD] Error fetching PDF for ${form.form_id}:`, error);
+        failureCount++;
+      }
+    }
+
+    // Check if we have any PDFs to zip
+    if (successCount === 0) {
+      return jsonResponse(
+        { error: 'No PDFs available for the selected forms' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
+
+    console.log(`[BATCH DOWNLOAD] Generating ZIP with ${successCount} PDFs...`);
+
+    // Generate ZIP
+    const zipBuffer = await zip.generateAsync({ 
+      type: 'arraybuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
+
+    console.log(`[BATCH DOWNLOAD] ZIP generated: ${(zipBuffer.byteLength / 1024).toFixed(2)} KB`);
+
+    // Create filename with timestamp
+    const now = new Date();
+    const timestamp = now.toISOString()
+      .replace(/[:]/g, '-')
+      .replace(/\..+/, '')
+      .replace('T', '_');
+    const filename = `ICS212_Forms_${timestamp}.zip`;
+
+    // Return ZIP file
+    return new Response(zipBuffer, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': zipBuffer.byteLength.toString(),
+        'X-Success-Count': successCount.toString(),
+        'X-Failure-Count': failureCount.toString(),
+      },
+    });
+  } catch (error) {
+    console.error('[BATCH DOWNLOAD] Error:', error);
+    return jsonResponse(
+      { 
+        error: 'Failed to generate ZIP file',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
+/**
+ * POST /api/ics212/forms/batch-email
+ * Email multiple forms with PDF attachments via Gmail SMTP
+ */
+async function handleBatchEmail(
+  request: Request,
+  env: Env,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  const db = env.DB || env.SUPPLY_DB;
+  if (!db) {
+    return jsonResponse(
+      { error: 'Database not available' },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+
+  try {
+    const { formIds, recipientOptions, emailTemplate } = await request.json() as {
+      formIds: string[];
+      recipientOptions: {
+        sendToInspectors?: boolean;
+        sendToAdmins?: boolean;
+        customRecipients?: string[];
+      };
+      emailTemplate?: {
+        subject?: string;
+        body?: string;
+      };
+    };
+
+    // Validation
+    if (!formIds || !Array.isArray(formIds) || formIds.length === 0) {
+      return jsonResponse({ error: 'formIds array is required' }, { status: 400, headers: corsHeaders });
+    }
+
+    if (formIds.length > 10) {
+      return jsonResponse({ error: 'Maximum 10 forms per email' }, { status: 400, headers: corsHeaders });
+    }
+
+    if (!recipientOptions) {
+      return jsonResponse({ error: 'recipientOptions is required' }, { status: 400, headers: corsHeaders });
+    }
+
+    // Fetch forms from database
+    const placeholders = formIds.map(() => '?').join(',');
+    const query = `SELECT * FROM ics212_forms WHERE form_id IN (${placeholders})`;
+    const { results: forms } = await db.prepare(query).bind(...formIds).all();
+
+    if (!forms || forms.length === 0) {
+      return jsonResponse({ error: 'No forms found' }, { status: 404, headers: corsHeaders });
+    }
+
+    // Build recipient list
+    const recipients: string[] = [];
+
+    // Add custom recipients
+    if (recipientOptions.customRecipients && Array.isArray(recipientOptions.customRecipients)) {
+      recipients.push(...recipientOptions.customRecipients.filter((email: string) => email && email.includes('@')));
+    }
+
+    // Add inspector emails if requested
+    if (recipientOptions.sendToInspectors) {
+      for (const form of forms as any[]) {
+        if (form.inspector_email && !recipients.includes(form.inspector_email)) {
+          recipients.push(form.inspector_email);
+        }
+      }
+    }
+
+    // Add admin emails if requested
+    if (recipientOptions.sendToAdmins) {
+      // For now, use Gmail account as admin
+      if (!recipients.includes(env.GMAIL_USER)) {
+        recipients.push(env.GMAIL_USER);
+      }
+    }
+
+    if (recipients.length === 0) {
+      return jsonResponse({ error: 'No valid recipients specified' }, { status: 400, headers: corsHeaders });
+    }
+
+    // Check R2 availability
+    if (!env.USAR_FORMS) {
+      return jsonResponse({ error: 'R2 storage not configured' }, { status: 500, headers: corsHeaders });
+    }
+
+    // Fetch PDFs from R2
+    const attachments = [];
+    for (const form of forms as any[]) {
+      if (form.pdf_filename) {
+        try {
+          const pdfObject = await env.USAR_FORMS.get(form.pdf_filename);
+          if (pdfObject) {
+            const pdfBuffer = await pdfObject.arrayBuffer();
+            attachments.push({
+              filename: `${form.form_id}_ICS212.pdf`,
+              content: pdfBuffer,
+            });
+          }
+        } catch (error) {
+          console.error(`Error fetching PDF for ${form.form_id}:`, error);
+        }
+      }
+    }
+
+    if (attachments.length === 0) {
+      return jsonResponse({ error: 'No PDFs available for selected forms' }, { status: 404, headers: corsHeaders });
+    }
+
+    // Generate email content
+    const subject = emailTemplate?.subject || `ICS-212 Forms - ${forms.length} Inspection${forms.length > 1 ? 's' : ''}`;
+    const htmlBody = emailTemplate?.body || generateEmailTemplate(forms);
+
+    // Send email
+    await sendEmailWithPDF(
+      {
+        to: recipients,
+        subject,
+        htmlBody,
+        attachments,
+      },
+      env
+    );
+
+    console.log(`[EMAIL] Sent ${forms.length} form(s) to ${recipients.length} recipient(s)`);
+
+    return jsonResponse({
+      success: true,
+      count: forms.length,
+      recipients: recipients.length,
+    }, { status: 200, headers: corsHeaders });
+  } catch (error) {
+    console.error('[BATCH EMAIL] Error:', error);
+    return jsonResponse({ 
+      error: 'Failed to send email',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500, headers: corsHeaders });
+  }
 }
 
 // ============================================================================

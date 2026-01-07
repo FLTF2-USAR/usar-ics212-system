@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Plus } from 'lucide-react';
 import TouchFeedback from '../mobile/TouchFeedback';
-import VehicleAutocomplete from '../VehicleAutocomplete';
+import SkeletonLoader from '../mobile/SkeletonLoader';
+import { AddVehicleModal } from './AddVehicleModal';
+import { API_BASE_URL } from '../../lib/config';
+import { showToast } from '../mobile/Toast';
 import type { ICS212FormData, Vehicle } from '../../types';
 
 interface VehicleSelectionStepProps {
@@ -19,15 +23,69 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
   onBack,
   errors,
 }) => {
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(true);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const handleVehicleSelect = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle);
-    // Auto-populate vehicle fields
-    onChange('vehicleIdNo', vehicle.vehicleId || '');
-    onChange('vehicleLicenseNo', vehicle.licenseNumber || '');
-    onChange('vehicleType', vehicle.vehicleType || '');
-    onChange('agencyRegUnit', vehicle.regUnit || '');
+  // Fetch vehicles on mount
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
+
+  const fetchVehicles = async () => {
+    setLoadingVehicles(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/vehicles`);
+      if (!response.ok) throw new Error('Failed to fetch vehicles');
+      const data = await response.json();
+      setVehicles(data.vehicles || []);
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      showToast({ message: 'Failed to load vehicles', type: 'error' });
+    } finally {
+      setLoadingVehicles(false);
+    }
+  };
+
+  const handleVehicleSelect = (vehicleId: string) => {
+    if (!vehicleId) {
+      // Clear selection
+      setSelectedVehicle(null);
+      onChange('vehicleIdNo', '');
+      onChange('vehicleLicenseNo', '');
+      onChange('vehicleType', '');
+      onChange('agencyRegUnit', '');
+      return;
+    }
+
+    // Special value for adding new vehicle
+    if (vehicleId === '__ADD_NEW__') {
+      setIsAddModalOpen(true);
+      return;
+    }
+
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (vehicle) {
+      setSelectedVehicle(vehicle);
+      // Auto-populate vehicle fields
+      onChange('vehicleIdNo', vehicle.vehicleId || '');
+      onChange('vehicleLicenseNo', vehicle.licenseNumber || '');
+      onChange('vehicleType', vehicle.vehicleType || '');
+      onChange('agencyRegUnit', vehicle.regUnit || '');
+    }
+  };
+
+  const handleVehicleAdded = async (newVehicle: Vehicle) => {
+    // Refresh vehicles list
+    await fetchVehicles();
+    
+    // Auto-select the newly added vehicle
+    setSelectedVehicle(newVehicle);
+    onChange('vehicleIdNo', newVehicle.vehicleId || '');
+    onChange('vehicleLicenseNo', newVehicle.licenseNumber || '');
+    onChange('vehicleType', newVehicle.vehicleType || '');
+    onChange('agencyRegUnit', newVehicle.regUnit || '');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,25 +107,63 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
           Vehicle Selection
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Select the vehicle to inspect
+          Select the vehicle to inspect or add a new one
         </p>
       </div>
 
-      {/* Vehicle Autocomplete */}
+      {/* Vehicle Dropdown */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-          Vehicle ID *
+          Vehicle Type
         </label>
-        <VehicleAutocomplete
-          value={formData.vehicleIdNo || ''}
-          onChange={(value) => onChange('vehicleIdNo', value)}
-          onVehicleSelect={handleVehicleSelect}
-          error={errors.vehicleIdNo}
-          apiEndpoint="/api/vehicles/autocomplete"
-        />
-        <p className="mt-1 text-xs text-gray-500">
-          Search by vehicle ID, make, or model
-        </p>
+        {loadingVehicles ? (
+          <SkeletonLoader type="input" />
+        ) : (
+          <select
+            value={selectedVehicle?.id || ''}
+            onChange={(e) => handleVehicleSelect(e.target.value)}
+            className={`
+              w-full px-4 py-3 text-base rounded-xl border-2 transition-all
+              focus:outline-none focus:ring-4
+              ${errors.vehicleIdNo 
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-100' 
+                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+              }
+              dark:bg-gray-700 dark:text-white
+            `}
+            style={{ minHeight: '56px' }}
+          >
+            <option value="">Select a vehicle (optional)</option>
+            {vehicles.map((vehicle) => (
+              <option key={vehicle.id} value={vehicle.id}>
+                {vehicle.vehicleType && vehicle.vehicleMake 
+                  ? `${vehicle.vehicleType} - ${vehicle.vehicleMake} ${vehicle.regUnit || ''}`
+                  : vehicle.regUnit || vehicle.vehicleType || vehicle.vehicleMake || 'Unknown Vehicle'
+                }
+              </option>
+            ))}
+            <option value="__ADD_NEW__" className="font-semibold">
+              + Add New Vehicle
+            </option>
+          </select>
+        )}
+        {!loadingVehicles && vehicles.length === 0 && (
+          <p className="mt-1 text-xs text-gray-500">
+            No vehicles found. Click "+ Add New Vehicle" to create one.
+          </p>
+        )}
+      </div>
+
+      {/* Add Vehicle Button (alternative placement) */}
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add New Vehicle
+        </button>
       </div>
 
       {/* Selected Vehicle Info Card */}
@@ -128,7 +224,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
           htmlFor="odometerReading"
           className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
         >
-          Odometer Reading (miles) *
+          Odometer Reading (miles)
         </label>
         <input
           type="number"
@@ -145,6 +241,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
               ? 'border-red-500 focus:border-red-500 focus:ring-red-100' 
               : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
             }
+            dark:bg-gray-700 dark:text-white
           `}
           style={{ minHeight: '56px' }}
         />
@@ -153,10 +250,10 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
         )}
       </div>
 
-      {/* Auto-populated fields (read-only display) */}
+      {/* Auto-populated fields (editable) */}
       <div className="space-y-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          Auto-Populated Vehicle Information
+          Vehicle Information (Auto-populated, editable)
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -169,7 +266,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
               value={formData.vehicleLicenseNo || ''}
               onChange={(e) => onChange('vehicleLicenseNo', e.target.value)}
               placeholder="Enter license number"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -182,7 +279,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
               value={formData.agencyRegUnit || ''}
               onChange={(e) => onChange('agencyRegUnit', e.target.value)}
               placeholder="Enter agency unit"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white"
             />
           </div>
 
@@ -195,7 +292,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
               value={formData.vehicleType || ''}
               onChange={(e) => onChange('vehicleType', e.target.value)}
               placeholder="e.g., Rescue, Engine, Ladder"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white"
             />
           </div>
         </div>
@@ -232,6 +329,13 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
           </button>
         </TouchFeedback>
       </div>
+
+      {/* Add Vehicle Modal */}
+      <AddVehicleModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onVehicleAdded={handleVehicleAdded}
+      />
     </motion.form>
   );
 };

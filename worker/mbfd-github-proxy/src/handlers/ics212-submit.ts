@@ -125,7 +125,6 @@ export async function handleICS212Submit(
     await storeFormInDatabase(db, formId, formData, releaseDecision);
 
     // === PHASE 2: PDF GENERATION AND R2 STORAGE ===
-    
     let pdfUrl: string | undefined;
     let pdfFilename: string | undefined;
     
@@ -219,21 +218,8 @@ function validateFormData(data: ICS212SubmissionRequest): string[] {
     errors.push('Incident name must be at least 3 characters');
   }
 
-  if (!data.vehicleIdNo) {
-    errors.push('Vehicle ID is required');
-  }
-
-  if (!data.vehicleLicenseNo) {
-    errors.push('Vehicle license number is required');
-  }
-
-  if (!data.agencyRegUnit) {
-    errors.push('Agency Reg/Unit is required');
-  }
-
-  if (!data.vehicleType) {
-    errors.push('Vehicle type is required');
-  }
+  // Vehicle fields are now optional (Phase 1 enhancement)
+  // Removed: vehicleIdNo, vehicleLicenseNo, agencyRegUnit, vehicleType validations
 
   if (!data.odometerReading || data.odometerReading === 0) {
     errors.push('Odometer reading is required');

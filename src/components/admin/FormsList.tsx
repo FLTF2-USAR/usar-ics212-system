@@ -10,6 +10,7 @@
  * - Swipeable list items with quick actions
  * - Pull-to-refresh
  * - Infinite scroll pagination
+ * - Edit and Regenerate PDF functionality for ICS-212 forms
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -21,7 +22,10 @@ import { Toast, showToast } from '../mobile/Toast';
 import { BottomSheet } from '../mobile/BottomSheet';
 import { FormDetail } from './FormDetail';
 import { ICS218Detail } from './ICS218Detail';
+import { EditSubmissionModal } from './EditSubmissionModal';
+import { EmailModal } from './EmailModal';
 import { API_BASE_URL, API_ENDPOINTS } from '../../lib/config';
+import { Edit, RefreshCw, DownloadCloud, CheckSquare, Square, Mail } from 'lucide-react';
 
 interface ICS212Form {
   id: number;
@@ -70,6 +74,18 @@ export function FormsList() {
   const [dateTo, setDateTo] = useState('');
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
   const [selectedFormType, setSelectedFormType] = useState<'ICS212' | 'ICS218' | null>(null);
+  
+  // Edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<ICS212Form | null>(null);
+  const [regeneratingPdfId, setRegeneratingPdfId] = useState<string | null>(null);
+
+  // Batch selection state
+  const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+  const [isDownloadingBatch, setIsDownloadingBatch] = useState(false);
+
+  // Email modal state
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const fetchForms = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!append) setLoading(true);
@@ -162,6 +178,131 @@ export function FormsList() {
   const handleViewForm = (formId: string, formType: 'ICS212' | 'ICS218') => {
     setSelectedFormId(formId);
     setSelectedFormType(formType);
+  };
+
+  const handleEditForm = (form: ICS212Form) => {
+    setSelectedSubmission(form);
+    setIsEditModalOpen(true);
+  };
+
+  const handleRegeneratePDF = async (formId: string) => {
+    setRegeneratingPdfId(formId);
+    try {
+      const response = await fetch(`${API_BASE_URL}/ics212/forms/${formId}/regenerate-pdf`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to regenerate PDF');
+      }
+
+      showToast({ message: 'PDF regenerated successfully', type: 'success' });
+      // Refresh forms list to show new PDF URL
+      await fetchForms(1, false);
+    } catch (error) {
+      console.error('Error regenerating PDF:', error);
+      showToast({ 
+        message: error instanceof Error ? error.message : 'Failed to regenerate PDF', 
+        type: 'error' 
+      });
+    } finally {
+      setRegeneratingPdfId(null);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    // Refresh forms list after successful save
+    await fetchForms(1, false);
+  };
+
+  // Toggle individual checkbox
+  const toggleFormSelection = (formId: string) => {
+    setSelectedFormIds((prev) =>
+      prev.includes(formId)
+        ? prev.filter((id) => id !== formId)
+        : [...prev, formId]
+    );
+  };
+
+  // Select all ICS-212 forms (max 50)
+  const selectAllForms = () => {
+    const ics212Forms = forms
+      .filter((f) => f.formType === 'ICS212')
+      .map((f) => (f as ICS212Form).form_id);
+    
+    if (ics212Forms.length > 50) {
+      showToast({ 
+        message: 'Maximum 50 forms can be downloaded at once. First 50 selected.', 
+        type: 'warning' 
+      });
+      setSelectedFormIds(ics212Forms.slice(0, 50));
+    } else {
+      setSelectedFormIds(ics212Forms);
+    }
+  };
+
+  // Clear selection
+  const clearSelection = () => {
+    setSelectedFormIds([]);
+  };
+
+  // Batch download handler
+  const handleBatchDownload = async () => {
+    if (selectedFormIds.length === 0) return;
+
+    setIsDownloadingBatch(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/ics212/forms/batch-download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formIds: selectedFormIds }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to download forms');
+      }
+
+      // Get success/failure counts from headers
+      const successCount = response.headers.get('X-Success-Count');
+      const failureCount = response.headers.get('X-Failure-Count');
+
+      // Download ZIP file
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filename = contentDisposition
+        ?.split('filename=')[1]
+        ?.replace(/"/g, '') || 'ICS212_Forms.zip';
+
+      // Trigger browser download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      // Show success message
+      let message = `Downloaded ${successCount || selectedFormIds.length} forms`;
+      if (failureCount && parseInt(failureCount) > 0) {
+        message += ` (${failureCount} PDFs not available)`;
+      }
+      showToast({ message, type: 'success' });
+      
+      // Clear selection
+      clearSelection();
+    } catch (error) {
+      console.error('Batch download error:', error);
+      showToast({ 
+        message: error instanceof Error ? error.message : 'Failed to download forms', 
+        type: 'error' 
+      });
+    } finally {
+      setIsDownloadingBatch(false);
+    }
   };
 
   const getFormTypeBadge = (formType: 'ICS212' | 'ICS218') => {
@@ -328,6 +469,85 @@ export function FormsList() {
         </div>
       </div>
 
+      {/* Bulk Actions Toolbar - Show when items selected */}
+      {selectedFormIds.length > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg shadow-sm p-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                {selectedFormIds.length} form{selectedFormIds.length > 1 ? 's' : ''} selected
+              </span>
+              <TouchFeedback>
+                <button
+                  onClick={clearSelection}
+                  className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                >
+                  Clear Selection
+                </button>
+              </TouchFeedback>
+            </div>
+            <div className="flex gap-2">
+              <TouchFeedback>
+                <button
+                  onClick={handleBatchDownload}
+                  disabled={isDownloadingBatch}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+                >
+                  {isDownloadingBatch ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <DownloadCloud className="w-4 h-4" />
+                      Download Selected ({selectedFormIds.length})
+                    </>
+                  )}
+                </button>
+              </TouchFeedback>
+              <TouchFeedback>
+                <button
+                  onClick={() => {
+                    if (selectedFormIds.length > 10) {
+                      showToast({ message: 'Maximum 10 forms can be emailed at once', type: 'warning' });
+                      return;
+                    }
+                    setIsEmailModalOpen(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+                >
+                  <Mail className="w-4 h-4" />
+                  Email Selected ({selectedFormIds.length})
+                </button>
+              </TouchFeedback>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Select All Checkbox - Show for ICS-212 forms */}
+      {!loading && forms.filter((f) => f.formType === 'ICS212').length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3">
+          <TouchFeedback>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={
+                  selectedFormIds.length > 0 &&
+                  selectedFormIds.length === forms.filter((f) => f.formType === 'ICS212').length
+                }
+                onChange={(e) => (e.target.checked ? selectAllForms() : clearSelection())}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Select All ICS-212 Forms ({forms.filter((f) => f.formType === 'ICS212').length})
+              </span>
+            </label>
+          </TouchFeedback>
+        </div>
+      )}
+
       {/* Results Count */}
       {!loading && (
         <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -381,7 +601,24 @@ export function FormsList() {
                     )}
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox - Only for ICS-212 forms */}
+                      {form.formType === 'ICS212' && (
+                        <div 
+                          className="flex-shrink-0 pt-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <TouchFeedback>
+                            <input
+                              type="checkbox"
+                              checked={selectedFormIds.includes((form as ICS212Form).form_id)}
+                              onChange={() => toggleFormSelection((form as ICS212Form).form_id)}
+                              className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
+                          </TouchFeedback>
+                        </div>
+                      )}
+
                       <div className="flex-1 min-w-0">
                         {/* Form Type Badge and Primary Info */}
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -427,6 +664,31 @@ export function FormsList() {
                             </>
                           )}
                         </div>
+
+                        {/* Action Buttons for ICS-212 */}
+                        {form.formType === 'ICS212' && (
+                          <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                            <TouchFeedback>
+                              <button
+                                onClick={() => handleEditForm(form as ICS212Form)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                              >
+                                <Edit className="w-3 h-3" />
+                                Edit
+                              </button>
+                            </TouchFeedback>
+                            <TouchFeedback>
+                              <button
+                                onClick={() => handleRegeneratePDF((form as ICS212Form).form_id)}
+                                disabled={regeneratingPdfId === (form as ICS212Form).form_id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <RefreshCw className={`w-3 h-3 ${regeneratingPdfId === (form as ICS212Form).form_id ? 'animate-spin' : ''}`} />
+                                {regeneratingPdfId === (form as ICS212Form).form_id ? 'Regenerating...' : 'Regenerate PDF'}
+                              </button>
+                            </TouchFeedback>
+                          </div>
+                        )}
                       </div>
 
                       {/* Action Button */}
@@ -437,47 +699,66 @@ export function FormsList() {
                   </div>
                 </TouchFeedback>
               </SwipeableListItem>
-            ))
-          )}
-
-          {/* Load More Button */}
-          {page < totalPages && !loading && (
-            <TouchFeedback>
-              <button
-                onClick={handleLoadMore}
-                className="w-full py-3 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-lg shadow-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Load More
-              </button>
-            </TouchFeedback>
-          )}
-
-          {/* Loading more indicator */}
-          {loading && page > 1 && (
-            <div className="text-center py-4">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
+            )) 
           )}
         </div>
       </PullToRefresh>
 
-      {/* Form Detail Bottom Sheet */}
-      {selectedFormId && selectedFormType && (
-        <BottomSheet
-          isOpen={!!selectedFormId}
-          onClose={() => {
-            setSelectedFormId(null);
-            setSelectedFormType(null);
-          }}
-          title="Form Details"
-        >
-          {selectedFormType === 'ICS212' && <FormDetail formId={selectedFormId} />}
-          {selectedFormType === 'ICS218' && <ICS218Detail formId={selectedFormId} />}
+      {/* Load More Button */}
+      {page < totalPages && !loading && (
+        <TouchFeedback>
+          <button
+            onClick={handleLoadMore}
+            className="w-full py-3 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-lg shadow-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            Load More
+          </button>
+        </TouchFeedback>
+      )}
+
+      {/* Loading more indicator */}
+      {loading && page > 1 && (
+        <div className="text-center py-4">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      )}
+
+      {/* Form Detail Modals */}
+      {selectedFormId && selectedFormType === 'ICS212' && (
+        <BottomSheet isOpen={true} onClose={() => setSelectedFormId(null)} title="Form Details">
+          <FormDetail formId={selectedFormId} onClose={() => setSelectedFormId(null)} />
         </BottomSheet>
       )}
 
-      {/* Toast Component */}
-      <Toast />
+      {selectedFormId && selectedFormType === 'ICS218' && (
+        <BottomSheet isOpen={true} onClose={() => setSelectedFormId(null)} title="Form Details">
+          <ICS218Detail formId={selectedFormId} onClose={() => setSelectedFormId(null)} />
+        </BottomSheet>
+      )}
+
+      {/* Edit Submission Modal */}
+      {isEditModalOpen && selectedSubmission && (
+        <EditSubmissionModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedSubmission(null);
+          }}
+          submission={selectedSubmission}
+          onSave={handleSaveEdit}
+        />
+      )}
+
+      {/* Email Modal */}
+      <EmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        selectedForms={forms.filter((f) => f.formType === 'ICS212' && selectedFormIds.includes((f as ICS212Form).form_id))}
+        onSuccess={() => {
+          clearSelection();
+          fetchForms(1, false);
+        }}
+      />
     </div>
   );
 }

@@ -69,6 +69,9 @@ export interface Env {
   GMAIL_CLIENT_SECRET: string;
   GMAIL_REFRESH_TOKEN: string;
   GMAIL_SENDER_EMAIL: string;
+  // Gmail SMTP secrets for email distribution
+  GMAIL_USER: string;
+  GMAIL_APP_PASSWORD: string;
   // Google Sheets service account
   GOOGLE_SA_KEY: string;
   GOOGLE_SHEET_ID: string;
