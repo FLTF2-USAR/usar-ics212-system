@@ -131,10 +131,14 @@ export const ICS212Form: React.FC = () => {
         }
         break;
 
-      case 1: // Vehicle Selection
-        // TEMPORARY: Validation removed to allow testing of form submission,
-        // admin dashboard, and PDF generation. Restore validation after testing complete.
-        return true
+      case 1: // Vehicle Selection - Step 2
+        if (!formData.selectedVehicleId) {
+          newErrors.vehicleIdNo = 'Please select a vehicle';
+        }
+        if (!formData.odometerReading || formData.odometerReading <= 0) {
+          newErrors.odometerReading = 'Odometer reading is required';
+        }
+        break;
 
       case 4: // Inspector Signature
         if (!formData.inspectorNamePrint || (formData.inspectorNamePrint || '').length < 2) {

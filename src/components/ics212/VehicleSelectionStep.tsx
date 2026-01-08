@@ -25,7 +25,6 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
 }) => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(true);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
   // Fetch vehicles on mount
@@ -50,8 +49,6 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
 
   const handleVehicleSelect = (vehicleId: string) => {
     if (!vehicleId) {
-      // Clear selection
-      setSelectedVehicle(null);
       onChange('selectedVehicleId', '');
       onChange('vehicleIdNo', '');
       onChange('vehicleLicenseNo', '');
@@ -60,7 +57,6 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
       return;
     }
 
-    // Special value for adding new vehicle
     if (vehicleId === '__ADD_NEW__') {
       setIsAddModalOpen(true);
       return;
@@ -68,12 +64,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
 
     const vehicle = vehicles.find(v => v.id === vehicleId);
     if (vehicle) {
-      setSelectedVehicle(vehicle);
-      
-      // Store the Airtable vehicle ID to track that a vehicle was selected
       onChange('selectedVehicleId', vehicle.id);
-      
-      // Auto-populate vehicle fields
       onChange('vehicleIdNo', vehicle.vehicleId || '');
       onChange('vehicleLicenseNo', vehicle.licenseNumber || '');
       onChange('vehicleType', vehicle.vehicleType || '');
@@ -82,15 +73,16 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
   };
 
   const handleVehicleAdded = async (newVehicle: Vehicle) => {
-    // Refresh vehicles list
     await fetchVehicles();
     
-    // Auto-select the newly added vehicle
-    setSelectedVehicle(newVehicle);
+    // Auto-select the new vehicle
+    onChange('selectedVehicleId', newVehicle.id);
     onChange('vehicleIdNo', newVehicle.vehicleId || '');
     onChange('vehicleLicenseNo', newVehicle.licenseNumber || '');
     onChange('vehicleType', newVehicle.vehicleType || '');
     onChange('agencyRegUnit', newVehicle.regUnit || '');
+    
+    setIsAddModalOpen(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -125,7 +117,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
           <SkeletonLoader type="rectangle" />
         ) : (
           <select
-            value={selectedVehicle?.id || ''}
+            value={formData.selectedVehicleId || ''}
             onChange={(e) => handleVehicleSelect(e.target.value)}
             className={`
               w-full px-4 py-3 text-base rounded-xl border-2 transition-all
@@ -172,54 +164,62 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
       </div>
 
       {/* Selected Vehicle Info Card */}
-      {selectedVehicle && (
+      {formData.selectedVehicleId && (
         <motion.div
           className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
-            Selected Vehicle Details
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p className="text-gray-600 dark:text-gray-400">Make/Type</p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {[selectedVehicle.vehicleMake, selectedVehicle.vehicleType]
-                  .filter(Boolean)
-                  .join(' ') || 'N/A'}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-400">License Plate</p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {selectedVehicle.licenseNumber || 'N/A'}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-400">Agency Unit</p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {selectedVehicle.regUnit || 'N/A'}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-600 dark:text-gray-400">Status</p>
-              <span
-                className={`
-                  inline-block px-2 py-1 text-xs font-medium rounded-full
-                  ${selectedVehicle.vehicleStatus === 'Active' 
-                    ? 'bg-green-100 text-green-800' 
-                    : selectedVehicle.vehicleStatus === 'Inactive'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-yellow-100 text-yellow-800'
-                  }
-                `}
-              >
-                {selectedVehicle.vehicleStatus || 'Unknown'}
-              </span>
-            </div>
-          </div>
+          {(() => {
+            const vehicle = vehicles.find(v => v.id === formData.selectedVehicleId);
+            if (!vehicle) return null;
+            return (
+              <>
+                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                  Selected Vehicle Details
+                </h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400">Make/Type</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {[vehicle.vehicleMake, vehicle.vehicleType]
+                        .filter(Boolean)
+                        .join(' ') || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400">License Plate</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {vehicle.licenseNumber || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400">Agency Unit</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {vehicle.regUnit || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400">Status</p>
+                    <span
+                      className={`
+                        inline-block px-2 py-1 text-xs font-medium rounded-full
+                        ${vehicle.vehicleStatus === 'Active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : vehicle.vehicleStatus === 'Inactive'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                        }
+                      `}
+                    >
+                      {vehicle.vehicleStatus || 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </motion.div>
       )}
 
