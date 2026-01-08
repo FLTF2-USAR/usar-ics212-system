@@ -269,30 +269,27 @@ async function storeFormInDatabase(
   data: ICS212SubmissionRequest,
   releaseDecision: string
 ): Promise<void> {
-  // Create table if not exists
+  // Create table if not exists - MUST match schema.sql
   await db
     .prepare(`
       CREATE TABLE IF NOT EXISTS ics212_forms (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         form_id TEXT UNIQUE NOT NULL,
         incident_name TEXT NOT NULL,
-        order_no TEXT,
-        vehicle_license_no TEXT NOT NULL,
-        agency_reg_unit TEXT NOT NULL,
-        vehicle_type TEXT NOT NULL,
-        odometer_reading INTEGER NOT NULL,
+        incident_date TEXT NOT NULL,
+        order_number TEXT,
         vehicle_id_no TEXT NOT NULL,
-        inspection_items TEXT NOT NULL,
-        additional_comments TEXT,
-        release_decision TEXT NOT NULL,
+        odometer_reading INTEGER NOT NULL,
+        vehicle_details JSON,
+        inspection_items JSON NOT NULL,
+        comments TEXT,
+        inspector_signature TEXT NOT NULL,
+        inspector_name TEXT NOT NULL,
         inspector_date TEXT NOT NULL,
-        inspector_time TEXT NOT NULL,
-        inspector_name_print TEXT NOT NULL,
-        inspector_signature TEXT,
-        operator_date TEXT,
-        operator_time TEXT,
-        operator_name_print TEXT,
         operator_signature TEXT,
+        operator_name TEXT,
+        operator_date TEXT,
+        release_decision TEXT NOT NULL,
         pdf_url TEXT,
         pdf_filename TEXT,
         github_issue_number INTEGER,
@@ -302,37 +299,41 @@ async function storeFormInDatabase(
     `)
     .run();
 
-  // Insert form data
+  // Prepare vehicle_details JSON from form data
+  const vehicleDetails = {
+    vehicleLicenseNo: data.vehicleLicenseNo || null,
+    agencyRegUnit: data.agencyRegUnit || null,
+    vehicleType: data.vehicleType || null,
+    selectedVehicleId: (data as any).selectedVehicleId || null,
+  };
+
+  // Insert form data - matching schema.sql columns
   await db
     .prepare(`
       INSERT INTO ics212_forms (
-        form_id, incident_name, order_no, vehicle_license_no, agency_reg_unit,
-        vehicle_type, odometer_reading, vehicle_id_no, inspection_items,
-        additional_comments, release_decision, inspector_date, inspector_time,
-        inspector_name_print, inspector_signature, operator_date, operator_time,
-        operator_name_print, operator_signature
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        form_id, incident_name, incident_date, order_number, vehicle_id_no,
+        odometer_reading, vehicle_details, inspection_items, comments,
+        inspector_signature, inspector_name, inspector_date,
+        operator_signature, operator_name, operator_date, release_decision
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .bind(
       formId,
       data.incidentName,
+      data.inspectorDate, // incident_date column
       data.orderNo || null,
-      data.vehicleLicenseNo,
-      data.agencyRegUnit,
-      data.vehicleType,
+      data.vehicleIdNo || 'N/A', // Default to 'N/A' if not provided
       data.odometerReading,
-      data.vehicleIdNo,
+      JSON.stringify(vehicleDetails), // vehicle_details JSON column
       JSON.stringify(data.inspectionItems),
       data.additionalComments || null,
-      releaseDecision,
-      data.inspectorDate,
-      data.inspectorTime,
-      data.inspectorNamePrint,
-      JSON.stringify(data.inspectorSignature),
-      data.operatorDate || null,
-      data.operatorTime || null,
-      data.operatorNamePrint || null,
-      data.operatorSignature ? JSON.stringify(data.operatorSignature) : null
+      JSON.stringify(data.inspectorSignature), // inspector_signature column
+      data.inspectorNamePrint, // inspector_name column
+      data.inspectorDate, // inspector_date column
+      data.operatorSignature ? JSON.stringify(data.operatorSignature) : null,
+      data.operatorNamePrint || null, // operator_name column
+      data.operatorDate || null, // operator_date column
+      releaseDecision
     )
     .run();
 }
