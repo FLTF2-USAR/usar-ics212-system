@@ -81,13 +81,14 @@ export interface Env {
   AIRTABLE_API_KEY: string;
   AIRTABLE_BASE_ID: string;
   AIRTABLE_TABLE_NAME: string;
-  // R2 storage for PDFs
-  USAR_FORMS: R2Bucket;
-  R2_PUBLIC_URL: string;
-  // KV namespace for configuration and queuing
-  MBFD_CONFIG: KVNamespace;
-  // KV namespace for image uploads
-  MBFD_UPLOADS: KVNamespace;
+  // R2 storage for PDFs (optional - falls back to KV)
+  USAR_FORMS?: R2Bucket;
+  R2_PUBLIC_URL?: string;
+  // KV namespaces for configuration and storage
+  MBFD_CONFIG: KVNamespace; // Legacy binding (required)
+  MBFD_UPLOADS: KVNamespace; // Legacy uploads binding (required)
+  USAR_CONFIG?: KVNamespace; // New USAR-specific config
+  USAR_UPLOADS?: KVNamespace; // New USAR-specific uploads (used for PDF storage fallback)
   // D1 database for task storage and vehicle change requests
   SUPPLY_DB?: D1Database;
   DB?: D1Database; // Alias for SUPPLY_DB for consistency

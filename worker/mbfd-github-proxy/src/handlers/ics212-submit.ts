@@ -143,7 +143,7 @@ export async function handleICS212Submit(
 
       console.log(`PDF generated: ${(pdfResult.size / 1024).toFixed(2)} KB`);
 
-      // Upload PDF to R2 storage
+      // Upload PDF to R2/KV storage (automatic fallback)
       const uploadResult = await uploadPDFToR2(env, {
         filename: pdfResult.filename,
         buffer: pdfResult.buffer,
@@ -155,18 +155,19 @@ export async function handleICS212Submit(
         },
       });
 
-      if (uploadResult.success) {
-        pdfUrl = uploadResult.url;
+      if (uploadResult.success && uploadResult.storageUrl) {
+        // Use internal storage URL format (r2:// or kv://)
+        pdfUrl = uploadResult.storageUrl;
         pdfFilename = pdfResult.filename;
-        console.log(`PDF uploaded to R2: ${pdfUrl}`);
+        console.log(`PDF uploaded successfully: ${pdfUrl}`);
 
-        // Update database with PDF info
+        // Update database with PDF storage URL
         await db
           .prepare('UPDATE ics212_forms SET pdf_url = ?, pdf_filename = ? WHERE form_id = ?')
           .bind(pdfUrl, pdfFilename, formId)
           .run();
       } else {
-        console.error('PDF upload to R2 failed:', uploadResult.error);
+        console.error('PDF upload failed:', uploadResult.error);
       }
     } catch (pdfError) {
       console.error('PDF generation/upload error:', pdfError);

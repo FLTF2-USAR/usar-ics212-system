@@ -1,10 +1,11 @@
 /**
  * ICS-212 PDF Download Handler
  * 
- * Provides endpoints for downloading generated ICS-212 PDFs from R2 storage:
- * - Download by form ID (looks up filename in database)
+ * Provides endpoints for downloading generated ICS-212 PDFs from R2 or KV storage:
+ * - Download by form ID (looks up storage URL in database)
  * - Download by filename directly
- * - Supports proper Content-Disposition headers for browser download
+ * - Supports both R2 and KV storage backends
+ * - Proper Content-Disposition headers for browser download
  * - Caching headers for performance
  */
 
@@ -16,7 +17,7 @@ import { getPDFFromR2 } from '../storage/r2-client';
  * 
  * Query parameters:
  * - formId: ICS-212 form ID (e.g., ICS212-2026-1234)
- * - filename: Direct filename in R2 bucket
+ * - filename: Direct filename in storage
  * 
  * @example GET /api/ics212/pdf?formId=ICS212-2026-1234
  * @example GET /api/ics212/pdf?filename=ICS212-USAR-101-1704556800000.pdf
@@ -52,9 +53,10 @@ export async function handlePDFDownload(
       );
     }
 
-    let pdfFilename = filename;
+    let pdfStorageUrl: string | undefined;
+    let pdfFilename: string | undefined;
 
-    // If formId is provided, look up filename in database
+    // If formId is provided, look up storage URL in database
     if (formId && !filename) {
       const db = env.DB || env.SUPPLY_DB;
       if (!db) {
@@ -70,13 +72,13 @@ export async function handlePDFDownload(
         );
       }
 
-      // Query database for PDF filename
+      // Query database for PDF storage URL
       const result = await db
-        .prepare('SELECT pdf_filename FROM ics212_forms WHERE form_id = ?')
+        .prepare('SELECT pdf_url, pdf_filename FROM ics212_forms WHERE form_id = ?')
         .bind(formId)
         .first();
 
-      if (!result || !result.pdf_filename) {
+      if (!result || !result.pdf_url) {
         return new Response(
           JSON.stringify({ error: 'Form not found or PDF not generated' }),
           { 
@@ -89,11 +91,16 @@ export async function handlePDFDownload(
         );
       }
 
+      pdfStorageUrl = result.pdf_url as string;
       pdfFilename = result.pdf_filename as string;
+    } else {
+      // Use provided filename
+      pdfStorageUrl = filename!;
+      pdfFilename = filename!;
     }
 
-    // Retrieve PDF from R2
-    const pdfResult = await getPDFFromR2(env, pdfFilename!);
+    // Retrieve PDF from R2/KV storage (automatic fallback)
+    const pdfResult = await getPDFFromR2(env, pdfStorageUrl);
 
     if (pdfResult.error || !pdfResult.buffer) {
       return new Response(
@@ -174,9 +181,10 @@ export async function handlePDFPreview(
       );
     }
 
-    let pdfFilename = filename;
+    let pdfStorageUrl: string | undefined;
+    let pdfFilename: string | undefined;
 
-    // Look up filename if formId provided
+    // Look up storage URL if formId provided
     if (formId && !filename) {
       const db = env.DB || env.SUPPLY_DB;
       if (!db) {
@@ -193,11 +201,11 @@ export async function handlePDFPreview(
       }
 
       const result = await db
-        .prepare('SELECT pdf_filename FROM ics212_forms WHERE form_id = ?')
+        .prepare('SELECT pdf_url, pdf_filename FROM ics212_forms WHERE form_id = ?')
         .bind(formId)
         .first();
 
-      if (!result || !result.pdf_filename) {
+      if (!result || !result.pdf_url) {
         return new Response(
           JSON.stringify({ error: 'Form not found or PDF not generated' }),
           { 
@@ -210,11 +218,15 @@ export async function handlePDFPreview(
         );
       }
 
+      pdfStorageUrl = result.pdf_url as string;
       pdfFilename = result.pdf_filename as string;
+    } else {
+      pdfStorageUrl = filename!;
+      pdfFilename = filename!;
     }
 
-    // Retrieve PDF from R2
-    const pdfResult = await getPDFFromR2(env, pdfFilename!);
+    // Retrieve PDF from R2/KV storage
+    const pdfResult = await getPDFFromR2(env, pdfStorageUrl);
 
     if (pdfResult.error || !pdfResult.buffer) {
       return new Response(

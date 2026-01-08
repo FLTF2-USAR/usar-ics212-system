@@ -590,9 +590,9 @@ async function handleDeleteForm(
 
   // Get form to check if PDF needs deletion
   const form = await db
-    .prepare('SELECT pdf_filename FROM ics212_forms WHERE form_id = ?')
+    .prepare('SELECT pdf_url FROM ics212_forms WHERE form_id = ?')
     .bind(formId)
-    .first<{ pdf_filename?: string }>();
+    .first<{ pdf_url?: string }>();
 
   if (!form) {
     return jsonResponse(
@@ -601,12 +601,13 @@ async function handleDeleteForm(
     );
   }
 
-  // Delete PDF from R2 if exists (check if bucket is available)
-  if (form.pdf_filename && env.USAR_FORMS) {
+  // Delete PDF from storage (handles both R2 and KV)
+  if (form.pdf_url) {
     try {
-      await env.USAR_FORMS.delete(form.pdf_filename);
+      const { deletePDFFromR2 } = await import('../storage/r2-client');
+      await deletePDFFromR2(env, form.pdf_url);
     } catch (error) {
-      console.error('Failed to delete PDF from R2:', error);
+      console.error('Failed to delete PDF from storage:', error);
     }
   }
 
@@ -804,7 +805,7 @@ async function handleRegeneratePDF(
 
     console.log(`PDF regenerated: ${(pdfResult.size / 1024).toFixed(2)} KB`);
 
-    // Upload to R2
+    // Upload to R2/KV storage (automatic fallback)
     const { uploadPDFToR2 } = await import('../storage/r2-client');
     const uploadResult = await uploadPDFToR2(env, {
       filename: pdfResult.filename,
@@ -822,17 +823,17 @@ async function handleRegeneratePDF(
       throw new Error(`PDF upload failed: ${uploadResult.error}`);
     }
 
-    // Update database with new PDF URL
+    // Update database with new PDF storage URL
     await db
       .prepare('UPDATE ics212_forms SET pdf_url = ?, pdf_filename = ?, updated_at = CURRENT_TIMESTAMP WHERE form_id = ?')
-      .bind(uploadResult.url, pdfResult.filename, formId)
+      .bind(uploadResult.storageUrl, pdfResult.filename, formId)
       .run();
 
     return jsonResponse(
       { 
         success: true,
         message: 'PDF regenerated successfully',
-        pdfUrl: uploadResult.url,
+        pdfUrl: uploadResult.storageUrl,
         filename: pdfResult.filename
       },
       { status: 200, headers: corsHeaders }
@@ -887,7 +888,7 @@ async function handleBatchDownload(
 
     console.log(`[BATCH DOWNLOAD] Fetching ${formIds.length} forms...`);
 
-    // Fetch forms from database to get PDF filenames
+    // Fetch forms from database to get PDF storage URLs
     const placeholders = formIds.map(() => '?').join(',');
     const query = `SELECT form_id, pdf_url, pdf_filename FROM ics212_forms WHERE form_id IN (${placeholders})`;
     const { results } = await db.prepare(query).bind(...formIds).all();
@@ -906,36 +907,30 @@ async function handleBatchDownload(
     let successCount = 0;
     let failureCount = 0;
 
-    // Check if R2 bucket is available
-    if (!env.USAR_FORMS) {
-      return jsonResponse(
-        { error: 'R2 storage not configured' },
-        { status: 500, headers: corsHeaders }
-      );
-    }
+    // Import getPDFFromR2 to handle both R2 and KV
+    const { getPDFFromR2 } = await import('../storage/r2-client');
 
-    // Fetch each PDF from R2 and add to ZIP
+    // Fetch each PDF from R2/KV and add to ZIP
     for (const form of results as any[]) {
-      if (!form.pdf_filename) {
-        console.warn(`[BATCH DOWNLOAD] Form ${form.form_id} has no PDF filename`);
+      if (!form.pdf_url) {
+        console.warn(`[BATCH DOWNLOAD] Form ${form.form_id} has no PDF URL`);
         failureCount++;
         continue;
       }
 
       try {
-        // Fetch PDF from R2
-        console.log(`[BATCH DOWNLOAD] Fetching PDF: ${form.pdf_filename}`);
-        const pdfObject = await env.USAR_FORMS.get(form.pdf_filename);
+        // Fetch PDF using storage URL (handles both r2:// and kv://)
+        console.log(`[BATCH DOWNLOAD] Fetching PDF: ${form.pdf_url}`);
+        const pdfResult = await getPDFFromR2(env, form.pdf_url);
         
-        if (pdfObject) {
-          const pdfBuffer = await pdfObject.arrayBuffer();
+        if (pdfResult.buffer) {
           // Add PDF to ZIP with clean filename
           const zipFilename = `${form.form_id}_ICS212.pdf`;
-          zip.file(zipFilename, pdfBuffer);
+          zip.file(zipFilename, pdfResult.buffer);
           successCount++;
-          console.log(`[BATCH DOWNLOAD] Added ${zipFilename} (${(pdfBuffer.byteLength / 1024).toFixed(2)} KB)`);
+          console.log(`[BATCH DOWNLOAD] Added ${zipFilename} (${(pdfResult.buffer.byteLength / 1024).toFixed(2)} KB)`);
         } else {
-          console.warn(`[BATCH DOWNLOAD] PDF not found in R2: ${form.pdf_filename}`);
+          console.warn(`[BATCH DOWNLOAD] PDF not found for: ${form.form_id}`, pdfResult.error);
           failureCount++;
         }
       } catch (error) {
@@ -1077,22 +1072,19 @@ async function handleBatchEmail(
       return jsonResponse({ error: 'No valid recipients specified' }, { status: 400, headers: corsHeaders });
     }
 
-    // Check R2 availability
-    if (!env.USAR_FORMS) {
-      return jsonResponse({ error: 'R2 storage not configured' }, { status: 500, headers: corsHeaders });
-    }
+    // Import getPDFFromR2 to handle both R2 and KV
+    const { getPDFFromR2 } = await import('../storage/r2-client');
 
-    // Fetch PDFs from R2
+    // Fetch PDFs from R2/KV storage
     const attachments = [];
     for (const form of forms as any[]) {
-      if (form.pdf_filename) {
+      if (form.pdf_url) {
         try {
-          const pdfObject = await env.USAR_FORMS.get(form.pdf_filename);
-          if (pdfObject) {
-            const pdfBuffer = await pdfObject.arrayBuffer();
+          const pdfResult = await getPDFFromR2(env, form.pdf_url);
+          if (pdfResult.buffer) {
             attachments.push({
               filename: `${form.form_id}_ICS212.pdf`,
-              content: pdfBuffer,
+              content: pdfResult.buffer,
             });
           }
         } catch (error) {
