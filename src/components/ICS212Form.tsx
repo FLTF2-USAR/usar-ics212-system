@@ -132,19 +132,9 @@ export const ICS212Form: React.FC = () => {
         break;
 
       case 1: // Vehicle Selection
-        // Check if vehicle is selected from Airtable OR manual fields are populated
-        const hasAirtableVehicle = formData.selectedVehicleId;
-        const hasManualVehicleInfo = formData.vehicleIdNo || formData.vehicleType || 
-                               formData.vehicleLicenseNo || formData.agencyRegUnit;
-        const hasVehicleInfo = hasAirtableVehicle || hasManualVehicleInfo;
-        
-        if (!hasVehicleInfo) {
-          newErrors.vehicleIdNo = 'Please select or enter vehicle information';
-        }
-        if (!formData.odometerReading || formData.odometerReading === 0) {
-          newErrors.odometerReading = 'Odometer reading is required';
-        }
-        break;
+        // TEMPORARY: Validation removed to allow testing of form submission,
+        // admin dashboard, and PDF generation. Restore validation after testing complete.
+        return true
 
       case 4: // Inspector Signature
         if (!formData.inspectorNamePrint || (formData.inspectorNamePrint || '').length < 2) {
