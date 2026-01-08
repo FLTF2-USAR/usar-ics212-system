@@ -11,6 +11,7 @@ const FormsHub = lazy(() => import('./components/FormsHub'));
 const ICS212Form = lazy(() => import('./components/ICS212Form'));
 const ICS218Form = lazy(() => import('./components/ics218/ICS218Form'));
 const ICS212AdminDashboard = lazy(() => import('./components/admin/ICS212AdminDashboard').then(m => ({ default: m.ICS212AdminDashboard })));
+const DashboardHome = lazy(() => import('./components/admin/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
 
 // Create QueryClient for React Query  
 const queryClient = new QueryClient({
@@ -52,6 +53,14 @@ function App() {
             />
             <Route 
               path="/admin" 
+              element={
+                <AdminAuth>
+                  <DashboardHome />
+                </AdminAuth>
+              } 
+            />
+            <Route 
+              path="/admin/forms" 
               element={
                 <AdminAuth>
                   <ICS212AdminDashboard />

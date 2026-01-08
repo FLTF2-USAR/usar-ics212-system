@@ -59,6 +59,11 @@ import { handleICS212Admin } from './handlers/ics212-admin';
 import { handleICS218PasswordValidation } from './handlers/ics218-password';
 import { handleICS218Submit } from './handlers/ics218-submit';
 import { handleICS218FormsList, handleICS218FormGet } from './handlers/ics218-forms';
+// NEW: Admin dashboard handlers
+import { handleFiles } from './handlers/files-handler';
+import { handleEmail } from './handlers/email-handler';
+import { handleAnalytics } from './handlers/analytics-handler';
+import { handleAirtable } from './handlers/airtable-handler';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -454,6 +459,28 @@ export default {
       return await handleICS218FormGet(request, env, corsHeaders, formId);
     }
 
+    // === NEW: ADMIN DASHBOARD API ENDPOINTS ===
+
+    // Files management endpoints
+    if (path.startsWith('/api/files')) {
+      return await handleFiles(request, env, corsHeaders);
+    }
+
+    // Email system endpoints
+    if (path.startsWith('/api/email')) {
+      return await handleEmail(request, env, corsHeaders);
+    }
+
+    // Enhanced analytics endpoints
+    if (path.startsWith('/api/analytics')) {
+      return await handleAnalytics(request, env, corsHeaders);
+    }
+
+    // Airtable deployment endpoints
+    if (path.startsWith('/api/airtable/deployments') || path.startsWith('/api/airtable/deployment-stats')) {
+      return await handleAirtable(request, env, corsHeaders);
+    }
+
     // Route to appropriate handler
     if (path.startsWith('/api/issues')) {
       return handleIssuesRequest(request, env, url);
@@ -816,4 +843,3 @@ function addCorsHeaders(response: Response): Response {
 // - Request logging to Cloudflare Analytics
 // - Input validation for request bodies
 // - Retry logic for transient GitHub API failures
-"" 

@@ -405,3 +405,167 @@ export interface ICS218PasswordValidationResponse {
   expiresAt?: string;
   error?: string;
 }
+
+// ============================================================
+// ADMIN DASHBOARD MODULE TYPES
+// ============================================================
+
+// File Management Module Types
+export interface FileMetadata {
+  id: string;
+  filename: string;
+  fileType: 'PDF' | 'Image' | 'Document' | 'Other';
+  size: number; // in bytes
+  uploader: string;
+  uploadDate: string; // ISO 8601
+  associatedForm?: string; // form ID
+  url: string;
+  thumbnailUrl?: string;
+}
+
+export interface FileUploadProgress {
+  filename: string;
+  progress: number; // 0-100
+  status: 'pending' | 'uploading' | 'complete' | 'error';
+  error?: string;
+}
+
+export interface FileBatchDownloadRequest {
+  fileIds: string[];
+}
+
+export interface FileBatchDownloadResponse {
+  success: boolean;
+  zipUrl: string;
+  expiresAt: string;
+}
+
+// Progress Tracking Module Types
+export interface AnalyticsTimeframe {
+  type: 'today' | 'week' | 'month' | 'last30' | 'deployment' | 'custom';
+  startDate?: string; // ISO 8601
+  endDate?: string; // ISO 8601
+}
+
+export interface DashboardStatistics {
+  totalSubmissions: number;
+  totalSubmissionsTrend?: number; // percentage change
+  completionRate: number; // 0-100
+  completionRateTrend?: number;
+  pendingForms: number;
+  releasedVehicles: number;
+  holdVehicles: number;
+  averageCompletionTime: number; // in minutes
+}
+
+export interface SubmissionTrendData {
+  date: string; // ISO 8601
+  submissions: number;
+  formType?: string;
+}
+
+export interface FormTypeDistribution {
+  formType: string;
+  count: number;
+  percentage: number;
+}
+
+export interface VehicleStatusData {
+  status: 'Released' | 'Hold' | 'Pending';
+  count: number;
+}
+
+export interface SafetyItemFailure {
+  item: string;
+  failureCount: number;
+  percentage: number;
+}
+
+export interface RecentSubmissionSummary {
+  id: string;
+  formType: string;
+  vehicle: string;
+  date: string;
+  status: string;
+}
+
+export interface AdvancedAnalyticsResponse {
+  statistics: DashboardStatistics;
+  submissionTrend: SubmissionTrendData[];
+  formTypeDistribution: FormTypeDistribution[];
+  vehicleStatusData: VehicleStatusData[];
+  safetyItemFailures: SafetyItemFailure[];
+  recentSubmissions: RecentSubmissionSummary[];
+}
+
+// Email Module Types
+export interface EmailRecipient {
+  email: string;
+  name?: string;
+  type: 'individual' | 'group';
+}
+
+export interface EmailAttachment {
+  id: string;
+  filename: string;
+  size: number;
+  url?: string;
+  source: 'form' | 'upload';
+}
+
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  category: 'inspection' | 'deployment' | 'general';
+  subject: string;
+  body: string;
+  variables: string[]; // e.g., ['{{vehicleName}}', '{{formDate}}']
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailDraft {
+  id: string;
+  recipients: EmailRecipient[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  body: string;
+  attachments: EmailAttachment[];
+  savedAt: string;
+}
+
+export interface SentEmail {
+  id: string;
+  recipients: string[];
+  subject: string;
+  body?: string;
+  sentAt: string;
+  status: 'sent' | 'failed';
+  attachmentCount: number;
+  error?: string;
+}
+
+export interface EmailSendRequest {
+  recipients: EmailRecipient[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  body: string;
+  isHtml?: boolean;
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailSendResponse {
+  success: boolean;
+  messageId?: string;
+  message?: string;
+  error?: string;
+}
+
+export interface EmailHistoryResponse {
+  emails: SentEmail[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
