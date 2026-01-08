@@ -28,7 +28,6 @@ interface EditSubmissionModalProps {
 
 export function EditSubmissionModal({ isOpen, onClose, submission, onSave }: EditSubmissionModalProps) {
   const [formData, setFormData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // When submission changes, update formData

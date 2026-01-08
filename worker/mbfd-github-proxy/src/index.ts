@@ -119,6 +119,7 @@ const REPO_NAME = 'mbfd-checkout-system';
 const ALLOWED_ORIGINS = [
   'https://pdarleyjr.github.io',
   'https://usar-ics212.pages.dev',
+  'https://56a46871.usar-ics212.pages.dev', // Production deployment
   'http://localhost:5173', // For local development
 ];
 
@@ -319,7 +320,7 @@ export default {
     }
 
     // Task update endpoint - extract ID from path
-    const taskMatch = path.match(/^\/api\/tasks\/(.+)$/);
+    const taskMatch = path.match(/^\/api\/tasks\/(.+)$/)
     if (taskMatch && request.method === 'PATCH') {
       const taskId = taskMatch[1];
       // Make sure 'mark-viewed' doesn't match this regex
@@ -355,7 +356,7 @@ export default {
     }
 
     // Image retrieval endpoint - extract key from path
-    const imageMatch = path.match(/^\/api\/uploads\/(.+)$/);
+    const imageMatch = path.match(/^\/api\/uploads\/(.+)$/)
     if (imageMatch && request.method === 'GET') {
       const key = imageMatch[1];
       return await handleImageRetrieval(request, env, key);
@@ -368,7 +369,7 @@ export default {
     }
 
     // Get form for specific apparatus (public for inspections)
-    const apparatusMatch = path.match(/^\/api\/forms\/apparatus\/(.+)$/);
+    const apparatusMatch = path.match(/^\/api\/forms\/apparatus\/(.+)$/)
     if (apparatusMatch && request.method === 'GET') {
       const apparatusName = decodeURIComponent(apparatusMatch[1]);
       return await handleGetFormByApparatus(request, env, corsHeaders, apparatusName);
@@ -380,7 +381,7 @@ export default {
     }
 
     // Get specific template (admin only)
-    const templateMatch = path.match(/^\/api\/forms\/template\/(.+)$/);
+    const templateMatch = path.match(/^\/api\/forms\/template\/(.+)$/)
     if (templateMatch && request.method === 'GET') {
       const templateId = decodeURIComponent(templateMatch[1]);
       return await handleGetTemplate(request, env, corsHeaders, templateId);
@@ -392,7 +393,7 @@ export default {
     }
 
     // Update form template (admin only)
-    const updateFormMatch = path.match(/^\/api\/forms\/(.+)$/);
+    const updateFormMatch = path.match(/^\/api\/forms\/(.+)$/)
     if (updateFormMatch && request.method ===  'PUT' && !updateFormMatch[1].includes('/')) {
       const templateId = decodeURIComponent(updateFormMatch[1]);
       return await handleUpdateForm(request, env, corsHeaders, templateId);
@@ -446,7 +447,7 @@ export default {
     }
 
     // ICS-218 single form retrieval
-    const ics218FormMatch = path.match(/^\/api\/ics218\/forms\/(.+)$/);
+    const ics218FormMatch = path.match(/^\/api\/ics218\/forms\/(.+)$/)
     if (ics218FormMatch && request.method === 'GET') {
       const formId = ics218FormMatch[1];
       return await handleICS218FormGet(request, env, corsHeaders, formId);
@@ -814,3 +815,4 @@ function addCorsHeaders(response: Response): Response {
 // - Request logging to Cloudflare Analytics
 // - Input validation for request bodies
 // - Retry logic for transient GitHub API failures
+"" 

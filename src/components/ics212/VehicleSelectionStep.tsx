@@ -117,7 +117,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
           Vehicle Type
         </label>
         {loadingVehicles ? (
-          <SkeletonLoader type="input" />
+          <SkeletonLoader type="rectangle" />
         ) : (
           <select
             value={selectedVehicle?.id || ''}

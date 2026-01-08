@@ -18,14 +18,14 @@ import { SwipeableListItem } from '../mobile/SwipeableListItem';
 import { PullToRefresh } from '../mobile/PullToRefresh';
 import { SkeletonLoader } from '../mobile/SkeletonLoader';
 import { TouchFeedback } from '../mobile/TouchFeedback';
-import { Toast, showToast } from '../mobile/Toast';
+import { showToast } from '../mobile/Toast';
 import { BottomSheet } from '../mobile/BottomSheet';
 import { FormDetail } from './FormDetail';
 import { ICS218Detail } from './ICS218Detail';
 import { EditSubmissionModal } from './EditSubmissionModal';
 import { EmailModal } from './EmailModal';
 import { API_BASE_URL, API_ENDPOINTS } from '../../lib/config';
-import { Edit, RefreshCw, DownloadCloud, CheckSquare, Square, Mail } from 'lucide-react';
+import { Edit, RefreshCw, DownloadCloud, Mail } from 'lucide-react';
 
 interface ICS212Form {
   id: number;
@@ -726,13 +726,13 @@ export function FormsList() {
       {/* Form Detail Modals */}
       {selectedFormId && selectedFormType === 'ICS212' && (
         <BottomSheet isOpen={true} onClose={() => setSelectedFormId(null)} title="Form Details">
-          <FormDetail formId={selectedFormId} onClose={() => setSelectedFormId(null)} />
+          <FormDetail formId={selectedFormId} />
         </BottomSheet>
       )}
 
       {selectedFormId && selectedFormType === 'ICS218' && (
         <BottomSheet isOpen={true} onClose={() => setSelectedFormId(null)} title="Form Details">
-          <ICS218Detail formId={selectedFormId} onClose={() => setSelectedFormId(null)} />
+          <ICS218Detail formId={selectedFormId} />
         </BottomSheet>
       )}
 
