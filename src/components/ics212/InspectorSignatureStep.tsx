@@ -10,7 +10,6 @@ interface InspectorSignatureStepProps {
   onChange: (field: keyof ICS212FormData, value: any) => void;
   onNext: () => void;
   onBack: () => void;
-  errors: Record<string, string>;
 }
 
 export const InspectorSignatureStep: React.FC<InspectorSignatureStepProps> = ({
@@ -18,7 +17,6 @@ export const InspectorSignatureStep: React.FC<InspectorSignatureStepProps> = ({
   onChange,
   onNext,
   onBack,
-  errors,
 }) => {
   const [hasSignedForm, setHasSignedForm] = useState(!!formData.inspectorSignature);
 
