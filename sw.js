@@ -1,4 +1,4 @@
-const CACHE_NAME = 'usar-ics212-v1';
+const CACHE_NAME = 'usar-ics212-v2-inspection-fix';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -31,14 +31,14 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          // Clone response for caching (with error handling)
-          try {
+          // Clone response BEFORE using it
+          if (response && response.status === 200) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then(cache => {
               cache.put(event.request, responseClone);
+            }).catch(err => {
+              console.warn('[SW] Could not cache response:', err.message);
             });
-          } catch (err) {
-            console.warn('[SW] Could not cache response:', err.message);
           }
           return response;
         })
@@ -58,14 +58,14 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          // Update cache with latest version (with error handling)
-          try {
+          // Clone response BEFORE using it
+          if (response && response.status === 200) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then(cache => {
               cache.put(event.request, responseClone);
+            }).catch(err => {
+              console.warn('[SW] Could not cache checklist:', err.message);
             });
-          } catch (err) {
-            console.warn('[SW] Could not cache checklist:', err.message);
           }
           return response;
         })
