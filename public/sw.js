@@ -31,8 +31,15 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          // Cache the new version
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+          // Clone response for caching (with error handling)
+          try {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseClone);
+            });
+          } catch (err) {
+            console.warn('[SW] Could not cache response:', err.message);
+          }
           return response;
         })
         .catch(() => {
@@ -51,8 +58,15 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          // Update cache with latest version
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+          // Update cache with latest version (with error handling)
+          try {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseClone);
+            });
+          } catch (err) {
+            console.warn('[SW] Could not cache checklist:', err.message);
+          }
           return response;
         })
         .catch(() => {

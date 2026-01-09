@@ -5,7 +5,7 @@ import { Save, Trash2 } from 'lucide-react';
 import ProgressIndicator from './mobile/ProgressIndicator';
 import IncidentInfoStep from './ics212/IncidentInfoStep';
 import VehicleSelectionStep from './ics212/VehicleSelectionStep';
-import InspectionItemsStep from './ics212/InspectionItemsStep';
+import InspectionItemsStep, { INSPECTION_ITEMS } from './ics212/InspectionItemsStep';
 import CommentsStep from './ics212/CommentsStep';
 import InspectorSignatureStep from './ics212/InspectorSignatureStep';
 import ReviewSubmitStep from './ics212/ReviewSubmitStep';
@@ -31,7 +31,7 @@ const INITIAL_FORM_DATA: Partial<ICS212FormData> = {
   vehicleType: '',
   selectedVehicleId: '',
   odometerReading: 0,
-  inspectionItems: [],
+  inspectionItems: INSPECTION_ITEMS,
   additionalComments: '',
   releaseStatus: 'release',
   inspectorDate: new Date().toISOString().split('T')[0],

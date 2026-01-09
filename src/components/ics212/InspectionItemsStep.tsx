@@ -13,7 +13,7 @@ interface InspectionItemsStepProps {
 }
 
 // Define all 17 inspection items (items 1-13 are safety-critical)
-const INSPECTION_ITEMS: InspectionItem[] = [
+export const INSPECTION_ITEMS: InspectionItem[] = [
   { itemNumber: 1, description: 'Gauges and lights', status: 'n/a', isSafetyItem: true, reference: 'See back*' },
   { itemNumber: 2, description: 'Seat belts', status: 'n/a', isSafetyItem: true, reference: 'See back*' },
   { itemNumber: 3, description: 'Glass and mirrors', status: 'n/a', isSafetyItem: true, reference: 'See back*' },
@@ -101,61 +101,55 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
 
             {/* Status Toggle Buttons */}
             <div className="flex gap-2 mt-3">
-              <TouchFeedback onTap={() => handleItemStatusChange(item.itemNumber, 'pass')} hapticType="light">
-                <button
-                  type="button"
-                  onClick={() => handleItemStatusChange(item.itemNumber, 'pass')}
-                  className={`
-                    flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
-                    font-semibold transition-all border-2
-                    ${itemData.status === 'pass'
-                      ? 'bg-green-500 text-white border-green-600 shadow-lg'
-                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
-                    }
-                  `}
-                  style={{ minHeight: '48px' }}
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Pass
-                </button>
-              </TouchFeedback>
+              <button
+                type="button"
+                onClick={() => handleItemStatusChange(item.itemNumber, 'pass')}
+                className={`
+                  flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
+                  font-semibold transition-all border-2
+                  ${itemData.status === 'pass'
+                    ? 'bg-green-500 text-white border-green-600 shadow-lg'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                  }
+                `}
+                style={{ minHeight: '48px' }}
+              >
+                <CheckCircle className="w-4 h-4" />
+                Pass
+              </button>
 
-              <TouchFeedback onTap={() => handleItemStatusChange(item.itemNumber, 'fail')} hapticType="medium">
-                <button
-                  type="button"
-                  onClick={() => handleItemStatusChange(item.itemNumber, 'fail')}
-                  className={`
-                    flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
-                    font-semibold transition-all border-2
-                    ${itemData.status === 'fail'
-                      ? 'bg-red-500 text-white border-red-600 shadow-lg'
-                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
-                    }
-                  `}
-                  style={{ minHeight: '48px' }}
-                >
-                  <XCircle className="w-4 h-4" />
-                  Fail
-                </button>
-              </TouchFeedback>
+              <button
+                type="button"
+                onClick={() => handleItemStatusChange(item.itemNumber, 'fail')}
+                className={`
+                  flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
+                  font-semibold transition-all border-2
+                  ${itemData.status === 'fail'
+                    ? 'bg-red-500 text-white border-red-600 shadow-lg'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                  }
+                `}
+                style={{ minHeight: '48px' }}
+              >
+                <XCircle className="w-4 h-4" />
+                Fail
+              </button>
 
-              <TouchFeedback onTap={() => handleItemStatusChange(item.itemNumber, 'n/a')} hapticType="light">
-                <button
-                  type="button"
-                  onClick={() => handleItemStatusChange(item.itemNumber, 'n/a')}
-                  className={`
-                    flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
-                    font-semibold transition-all border-2
-                    ${itemData.status === 'n/a'
-                      ? 'bg-gray-400 text-white border-gray-500 shadow-lg'
-                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
-                    }
-                  `}
-                  style={{ minHeight: '48px' }}
-                >
-                  N/A
-                </button>
-              </TouchFeedback>
+              <button
+                type="button"
+                onClick={() => handleItemStatusChange(item.itemNumber, 'n/a')}
+                className={`
+                  flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
+                  font-semibold transition-all border-2
+                  ${itemData.status === 'n/a'
+                    ? 'bg-gray-400 text-white border-gray-500 shadow-lg'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                  }
+                `}
+                style={{ minHeight: '48px' }}
+              >
+                N/A
+              </button>
             </div>
           </div>
         </div>
