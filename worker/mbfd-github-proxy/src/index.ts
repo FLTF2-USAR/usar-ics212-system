@@ -412,7 +412,7 @@ export default {
 
     // NEW: Vehicle API endpoints (USAR ICS-212 integration)
     if (path.startsWith('/api/vehicles')) {
-      return await handleVehicles(request, env);
+      return await handleVehicles(request, env, corsHeaders);
     }
 
     // NEW: ICS-212 form submission endpoint

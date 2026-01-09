@@ -14,17 +14,14 @@ interface Env {
 /**
  * Handle vehicle-related API requests
  */
-export async function handleVehicles(request: Request, env: Env): Promise<Response> {
+export async function handleVehicles(
+  request: Request, 
+  env: Env,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
-
-  // CORS headers
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
 
   // Handle preflight requests
   if (method === 'OPTIONS') {
