@@ -41,7 +41,7 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
   errors: _errors,
 }) => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['pre-trip', 'safety', 'operational']));
-  
+
   // Initialize inspection items if not already set
   const inspectionItems = formData.inspectionItems || INSPECTION_ITEMS;
 
@@ -58,14 +58,13 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
       item.itemNumber === itemNumber ? { ...item, status } : item
     );
     
-    // Calculate release decision from the updated items
-    const safetyItemsFailed = updatedItems.some(
-      item => item.isSafetyItem && item.status === 'fail'
-    );
-    const newReleaseStatus = safetyItemsFailed ? 'hold' : 'release';
-    
     onChange('inspectionItems', updatedItems);
-    onChange('releaseStatus', newReleaseStatus);
+  };
+
+  const handleButtonClick = (e: React.MouseEvent, itemNumber: number, status: 'pass' | 'fail' | 'n/a') => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleItemStatusChange(itemNumber, status);
   };
 
   const toggleSection = (section: string) => {
@@ -103,7 +102,7 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
             <div className="flex gap-2 mt-3">
               <button
                 type="button"
-                onClick={() => handleItemStatusChange(item.itemNumber, 'pass')}
+                onClick={(e) => handleButtonClick(e, item.itemNumber, 'pass')}
                 className={`
                   flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
                   font-semibold transition-all border-2
@@ -112,7 +111,7 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
                   }
                 `}
-                style={{ minHeight: '48px' }}
+                style={{ minHeight: '48px', touchAction: 'manipulation' }}
               >
                 <CheckCircle className="w-4 h-4" />
                 Pass
@@ -120,7 +119,7 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
 
               <button
                 type="button"
-                onClick={() => handleItemStatusChange(item.itemNumber, 'fail')}
+                onClick={(e) => handleButtonClick(e, item.itemNumber, 'fail')}
                 className={`
                   flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
                   font-semibold transition-all border-2
@@ -129,7 +128,7 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
                   }
                 `}
-                style={{ minHeight: '48px' }}
+                style={{ minHeight: '48px', touchAction: 'manipulation' }}
               >
                 <XCircle className="w-4 h-4" />
                 Fail
@@ -137,7 +136,7 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
 
               <button
                 type="button"
-                onClick={() => handleItemStatusChange(item.itemNumber, 'n/a')}
+                onClick={(e) => handleButtonClick(e, item.itemNumber, 'n/a')}
                 className={`
                   flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg
                   font-semibold transition-all border-2
@@ -146,7 +145,7 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
                   }
                 `}
-                style={{ minHeight: '48px' }}
+                style={{ minHeight: '48px', touchAction: 'manipulation' }}
               >
                 N/A
               </button>
