@@ -9,6 +9,7 @@ import InspectionItemsStep from './ics212/InspectionItemsStep';
 import CommentsStep from './ics212/CommentsStep';
 import InspectorSignatureStep from './ics212/InspectorSignatureStep';
 import ReviewSubmitStep from './ics212/ReviewSubmitStep';
+import { API_ENDPOINTS } from '../lib/config';
 import type { ICS212FormData, ICS212DraftData, ICS212SubmissionResponse } from '../types';
 
 const STEPS = [
@@ -141,12 +142,11 @@ export const ICS212Form: React.FC = () => {
         break;
 
       case 4: // Inspector Signature
-        if (!formData.inspectorNamePrint || (formData.inspectorNamePrint || '').length < 2) {
-          newErrors.inspectorNamePrint = 'Inspector name must be at least 2 characters';
-        }
+        // Signature is required, but name is optional (advisory only)
         if (!formData.inspectorSignature) {
           newErrors.inspectorSignature = 'Signature is required';
         }
+        // Note: inspectorNamePrint is now optional - no validation
         break;
     }
 
@@ -206,8 +206,8 @@ export const ICS212Form: React.FC = () => {
         status: 'submitted',
       };
 
-      // Submit to backend
-      const response = await fetch('/api/ics212/submit', {
+      // Submit to backend using configured API endpoint
+      const response = await fetch(API_ENDPOINTS.submitForm, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

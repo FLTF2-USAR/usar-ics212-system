@@ -249,14 +249,14 @@ export const ReviewSubmitStep: React.FC<ReviewSubmitStepProps> = ({
               htmlFor="operatorNamePrint"
               className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
             >
-              Operator Name (Print) *
+              Operator Name (Print)
             </label>
             <input
               type="text"
               id="operatorNamePrint"
               value={formData.operatorNamePrint || ''}
               onChange={(e) => onChange('operatorNamePrint', e.target.value)}
-              placeholder="Enter operator full name"
+              placeholder="Enter operator full name (recommended)"
               maxLength={100}
               disabled={hasOperatorSigned}
               className={`
@@ -268,6 +268,11 @@ export const ReviewSubmitStep: React.FC<ReviewSubmitStepProps> = ({
                 }
               `}
             />
+            {!formData.operatorNamePrint && !hasOperatorSigned && (
+              <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
+                💡 Recommended: Add your name for record keeping and accountability
+              </p>
+            )}
           </div>
 
           <SignatureCanvas

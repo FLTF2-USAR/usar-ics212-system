@@ -92,14 +92,14 @@ export const InspectorSignatureStep: React.FC<InspectorSignatureStepProps> = ({
           htmlFor="inspectorNamePrint"
           className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
         >
-          Inspector Name (Print) *
+          Inspector Name (Print)
         </label>
         <input
           type="text"
           id="inspectorNamePrint"
           value={formData.inspectorNamePrint || ''}
           onChange={(e) => onChange('inspectorNamePrint', e.target.value)}
-          placeholder="Enter your full name"
+          placeholder="Enter your full name (recommended)"
           maxLength={100}
           disabled={hasSignedForm}
           className={`
@@ -107,15 +107,15 @@ export const InspectorSignatureStep: React.FC<InspectorSignatureStepProps> = ({
             focus:outline-none focus:ring-4
             ${hasSignedForm 
               ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 cursor-not-allowed' 
-              : errors.inspectorNamePrint 
-              ? 'border-red-500 focus:border-red-500 focus:ring-red-100' 
               : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
             }
           `}
           style={{ minHeight: '56px' }}
         />
-        {errors.inspectorNamePrint && !hasSignedForm && (
-          <p className="mt-1 text-sm text-red-600">{errors.inspectorNamePrint}</p>
+        {!formData.inspectorNamePrint && !hasSignedForm && (
+          <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
+            💡 Recommended: Add your name for record keeping and accountability
+          </p>
         )}
       </div>
 

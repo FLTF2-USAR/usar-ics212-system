@@ -57,8 +57,15 @@ export const InspectionItemsStep: React.FC<InspectionItemsStepProps> = ({
     const updatedItems = inspectionItems.map(item =>
       item.itemNumber === itemNumber ? { ...item, status } : item
     );
+    
+    // Calculate release decision from the updated items
+    const safetyItemsFailed = updatedItems.some(
+      item => item.isSafetyItem && item.status === 'fail'
+    );
+    const newReleaseStatus = safetyItemsFailed ? 'hold' : 'release';
+    
     onChange('inspectionItems', updatedItems);
-    onChange('releaseStatus', releaseDecision);
+    onChange('releaseStatus', newReleaseStatus);
   };
 
   const toggleSection = (section: string) => {
