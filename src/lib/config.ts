@@ -2,8 +2,9 @@ import type { Apparatus } from '../types';
 
 /**
  * Cloudflare Worker URL for API requests
+ * .trim() prevents issues with environment variables containing trailing/leading spaces
  */
-export const WORKER_URL = import.meta.env.VITE_API_URL || 'https://usar-ics212.pdarleyjr.workers.dev';
+export const WORKER_URL = (import.meta.env.VITE_API_URL || 'https://usar-ics212.pdarleyjr.workers.dev').trim();
 
 /**
  * API base URL (derives from WORKER_URL for consistency)
@@ -20,23 +21,23 @@ export const API_ENDPOINTS = {
   analytics: `${API_BASE_URL}/ics212/analytics`,
   submitForm: `${API_BASE_URL}/ics212/submit`,
   emailForm: (id: string) => `${API_BASE_URL}/ics212/forms/${id}/email`,
-  
+
   // ICS-218 Forms
   ics218Forms: `${API_BASE_URL}/ics218/forms`,
   ics218FormById: (id: string) => `${API_BASE_URL}/ics218/forms/${id}`,
   ics218Submit: `${API_BASE_URL}/ics218/submit`,
   ics218ValidatePassword: `${API_BASE_URL}/ics218/validate-password`,
   ics218PdfDownload: (id: string) => `${API_BASE_URL}/ics218/pdf/${id}`,
-  
+
   // Vehicles
   vehicles: `${API_BASE_URL}/vehicles`,
   vehicleAutocomplete: `${API_BASE_URL}/vehicles/autocomplete`,
   vehicleById: (id: string) => `${API_BASE_URL}/vehicles/${id}`,
-  
+
   // Inventory & Dynamic Forms
   inventory: `${API_BASE_URL}/inventory`,
   dynamicForms: `${API_BASE_URL}/forms`,
-  
+
   // Health
   health: `${API_BASE_URL}/health`,
 };
