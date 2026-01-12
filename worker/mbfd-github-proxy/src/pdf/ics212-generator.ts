@@ -11,7 +11,7 @@
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import type { ICS212FormData, InspectionItem, DigitalSignature } from '../../../src/types';
+import type { ICS212FormData, InspectionItem, DigitalSignature } from '../types/ics212';
 
 // PDF Constants - Official ICS-212 WF Layout Specifications
 const PAGE_SIZE = { width: 612, height: 792 }; // 8.5" x 11" @ 72 DPI
