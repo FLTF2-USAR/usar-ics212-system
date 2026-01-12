@@ -468,7 +468,7 @@ function renderInspectionGrid(
     });
     
     if (item.status === 'pass') {
-      page.drawText('✓', {
+      page.drawText('X', {
         x: checkboxX.pass + 2,
         y: y - 1,
         size: FONTS.normal,
@@ -488,7 +488,7 @@ function renderInspectionGrid(
     });
     
     if (item.status === 'fail') {
-      page.drawText('✓', {
+      page.drawText('X', {
         x: checkboxX.fail + 2,
         y: y - 1,
         size: FONTS.normal,
@@ -508,7 +508,7 @@ function renderInspectionGrid(
     });
     
     if (item.status === 'n/a') {
-      page.drawText('✓', {
+      page.drawText('X', {
         x: checkboxX.na + 2,
         y: y - 1,
         size: FONTS.normal,
