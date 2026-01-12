@@ -626,7 +626,7 @@ export function FormsList() {
                           {form.formType === 'ICS212' && (
                             <>
                               <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                                {(form as ICS212Form).vehicle_id_no}
+                                {(form as ICS212Form).vehicle_type}
                               </h3>
                               {getStatusBadge((form as ICS212Form).release_decision)}
                             </>
@@ -638,6 +638,14 @@ export function FormsList() {
                           )}
                         </div>
 
+                        {/* Date/Time and Vehicle ID - Prominently displayed */}
+                        {form.formType === 'ICS212' && (
+                          <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            📅 {new Date((form as ICS212Form).inspector_date).toLocaleDateString()} at {(form as ICS212Form).inspector_time}
+                            <span className="ml-2 text-gray-500 dark:text-gray-400">• ID: {(form as ICS212Form).vehicle_id_no}</span>
+                          </div>
+                        )}
+
                         {/* Incident Name / Secondary Info */}
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 truncate">
                           {form.formType === 'ICS212' ? (form as ICS212Form).incident_name : (form as ICS218Form).vehicle_category}
@@ -648,7 +656,6 @@ export function FormsList() {
                           {form.formType === 'ICS212' && (
                             <>
                               <span>🔍 {(form as ICS212Form).inspector_name_print}</span>
-                              <span>📅 {new Date((form as ICS212Form).inspector_date).toLocaleDateString()}</span>
                               {(form as ICS212Form).pass_count !== undefined && (form as ICS212Form).fail_count !== undefined && (
                                 <span>
                                   ✅ {(form as ICS212Form).pass_count} / ❌ {(form as ICS212Form).fail_count}
