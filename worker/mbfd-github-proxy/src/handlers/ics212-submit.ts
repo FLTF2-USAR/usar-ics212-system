@@ -131,6 +131,11 @@ export async function handleICS212Submit(
     try {
       console.log(`Generating PDF for form ${formId}...`);
       
+      // Ensure R2 bucket is available
+      if (!env.USAR_FORMS) {
+        throw new Error('R2 bucket not configured - USAR_FORMS binding missing');
+      }
+      
       // Generate official ICS-212 PDF
       const pdfResult = await generateICS212PDF({
         formData: {
@@ -139,6 +144,7 @@ export async function handleICS212Submit(
           releaseStatus: releaseDecision as 'hold' | 'release',
         } as any,
         includeSignatures: true,
+        r2Bucket: env.USAR_FORMS,
       });
 
       console.log(`PDF generated: ${(pdfResult.size / 1024).toFixed(2)} KB`);

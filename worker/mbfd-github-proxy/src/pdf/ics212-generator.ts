@@ -1,40 +1,104 @@
 /**
  * ICS-212 WF Vehicle Safety Inspection Form - PDF Generation Module
- *
- * Generates EXACT REPLICA of official ICS-212 Wildfire edition government form
- * - Table-based layout matching official NFES 001251 specification
- * - Light blue cell backgrounds for data entry fields
- * - Embedded digital signatures
- * - Government-compliant formatting for submission
- *
- * Target: 100% visual fidelity to official form
+ * 
+ * NEW APPROACH: Loads official ICS-212 template PDF from R2 and overlays user data at precise coordinates
+ * Similar to JotForm's PDF form filling - ensures pixel-perfect alignment
+ * 
+ * Template Location: R2 bucket 'usar-forms', key 'templates/ics_212_template.pdf'
  */
 
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import type { ICS212FormData, InspectionItem, DigitalSignature } from '../types/ics212';
 
-// PDF Constants - Official ICS-212 WF Layout Specifications
-const PAGE_SIZE = { width: 612, height: 792 }; // 8.5" x 11" @ 72 DPI
-const MARGINS = { top: 50, bottom: 36, left: 50, right: 50 }; 
-const CONTENT_WIDTH = PAGE_SIZE.width - MARGINS.left - MARGINS.right; // 512pt
+// PDF Constants - Letter size 8.5" x 11" @ 72 DPI
+const PAGE_SIZE = { width: 612, height: 792 };
 
-// Font Sizes - Matching Official Form
+// Font Sizes for overlaying text
 const FONTS = {
-  title: 14,
-  subtitle: 10,
-  label: 9,
-  data: 9,
-  small: 8,
-  tiny: 7,
+  data: 10,       // User data fields
+  small: 8,       // Secondary text
+  checkbox: 8,    // Checkbox marks
 };
 
-// Colors - Matching Official Form
+// Colors
 const COLORS = {
   black: rgb(0, 0, 0),
-  darkGray: rgb(0.3, 0.3, 0.3),
-  lightBlue: rgb(0.85, 0.88, 0.95), // Light blue cell background
-  white: rgb(1, 1, 1),
-  borderGray: rgb(0, 0, 0),
+  blue: rgb(0, 0, 0.8),
+};
+
+/**
+ * R2 Bucket Interface
+ */
+interface R2Bucket {
+  get(key: string): Promise<R2ObjectBody | null>;
+}
+
+interface R2ObjectBody {
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+/**
+ * PDF Coordinate Mapping - Precise positions aligned to official form template
+ * Y-coordinates are measured from BOTTOM of page, X from LEFT
+ * ADJUSTED: Data fields positioned BELOW labels to sit inside form boxes
+ */
+const FIELD_COORDS = {
+  // Top section - Row 1 (data goes in boxes below "Incident Name" and "Order No." labels)
+  incidentName: { x: 60, y: 696 },   // Adjusted down from 710
+  orderNo: { x: 455, y: 696 },       // Adjusted down from 710
+  
+  // Top section - Row 2 (below "Vehicle License No." and "Agency Reg/Unit" labels)
+  vehicleLicenseNo: { x: 60, y: 674 },  // Adjusted down from 688
+  agency: { x: 285, y: 674 },           // Adjusted down from 688
+  regUnit: { x: 455, y: 674 },          // Adjusted down from 688
+  
+  // Top section - Row 3 (below "Type", "Odometer Reading", "Veh. ID No." labels)
+  vehicleType: { x: 60, y: 652 },        // Adjusted down from 666
+  odometerReading: { x: 285, y: 652 },   // Adjusted down from 666
+  vehicleIdNo: { x: 455, y: 652 },       // Adjusted down from 666
+  
+  // Inspection items - Pass/Fail checkboxes (17 items)
+  // Each item has: passX, failX, commentX, and y coordinate
+  // Adjusted to align checkbox 'X' marks within checkbox boxes
+  inspectionItems: [
+    { passX: 345, failX: 395, commentX: 445, y: 621 },  // 1. Gauges and lights
+    { passX: 345, failX: 395, commentX: 445, y: 605 },  // 2. Seat belts
+    { passX: 345, failX: 395, commentX: 445, y: 589 },  // 3. Glass and mirrors
+    { passX: 345, failX: 395, commentX: 445, y: 573 },  // 4. Wipers and horn
+    { passX: 345, failX: 395, commentX: 445, y: 557 },  // 5. Engine compartment
+    { passX: 345, failX: 395, commentX: 445, y: 541 },  // 6. Fuel System
+    { passX: 345, failX: 395, commentX: 445, y: 525 },  // 7. Steering
+    { passX: 345, failX: 395, commentX: 445, y: 509 },  // 8. Brakes
+    { passX: 345, failX: 395, commentX: 445, y: 493 },  // 9. Drive line U-joints
+    { passX: 345, failX: 395, commentX: 445, y: 477 },  // 10. Springs and shocks
+    { passX: 345, failX: 395, commentX: 445, y: 461 },  // 11. Exhaust system
+    { passX: 345, failX: 395, commentX: 445, y: 445 },  // 12. Frame
+    { passX: 345, failX: 395, commentX: 445, y: 429 },  // 13. Tire and wheels
+    { passX: 345, failX: 395, commentX: 445, y: 413 },  // 14. Coupling devices / Emergency exit
+    { passX: 345, failX: 395, commentX: 445, y: 397 },  // 15. Pump operation
+    { passX: 345, failX: 395, commentX: 445, y: 381 },  // 16. Damage on incident
+    { passX: 345, failX: 395, commentX: 445, y: 365 },  // 17. Other
+  ],
+
+  // Additional Comments section (starts below "Additional Comments:" label)
+  additionalComments: { x: 60, y: 328, maxWidth: 500, lineHeight: 12 },
+
+  // Bottom decision boxes - Adjusted for proper alignment within form boxes
+  holdForRepairs: {
+    checkbox: { x: 60, y: 237 },          // Adjusted for checkbox alignment
+    date: { x: 95, y: 218 },              // Date field below checkbox
+    time: { x: 185, y: 218 },             // Time field 
+    inspectorName: { x: 95, y: 198 },     // Name (Print) field
+    inspectorSignature: { x: 95, y: 168, width: 150, height: 25 },  // Signature box
+  },
+
+  release: {
+    checkbox: { x: 345, y: 237 },         // Adjusted for checkbox alignment
+    date: { x: 380, y: 218 },             // Date field below checkbox
+    time: { x: 470, y: 218 },             // Time field
+    operatorName: { x: 380, y: 198 },     // Name (Print) field
+    operatorSignature: { x: 380, y: 168, width: 150, height: 25 },  // Signature box
+  },
 };
 
 /**
@@ -44,6 +108,7 @@ export interface PDFGenerationOptions {
   formData: ICS212FormData;
   includeSignatures: boolean;
   watermark?: string;
+  r2Bucket: R2Bucket;  // R2 bucket for fetching template
 }
 
 /**
@@ -57,7 +122,7 @@ export interface PDFGenerationResult {
 }
 
 /**
- * Main PDF Generation Function
+ * Main PDF Generation Function - Loads template and overlays user data
  */
 export async function generateICS212PDF(
   options: PDFGenerationOptions
@@ -65,22 +130,33 @@ export async function generateICS212PDF(
   const startTime = Date.now();
   
   try {
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([PAGE_SIZE.width, PAGE_SIZE.height]);
+    console.log('Fetching ICS-212 template from R2...');
     
-    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    // Fetch template PDF from R2
+    const templateObject = await options.r2Bucket.get('templates/ics_212_template.pdf');
+    if (!templateObject) {
+      throw new Error('Template PDF not found in R2 bucket');
+    }
+    
+    const templateBytes = await templateObject.arrayBuffer();
+    console.log(`Template loaded: ${(templateBytes.byteLength / 1024).toFixed(2)}KB`);
+    
+    // Load the template PDF
+    const pdfDoc = await PDFDocument.load(templateBytes);
+    const pages = pdfDoc.getPages();
+    const page = pages[0];
+    const { width, height } = page.getSize();
+    
+    console.log(`PDF dimensions: ${width}x${height}`);
+    
+    // Embed fonts
     const normalFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    let currentY = PAGE_SIZE.height - MARGINS.top;
+    // Overlay user data onto template
+    await overlayFormData(page, normalFont, boldFont, options.formData, pdfDoc);
     
-    // Render form sections matching official layout
-    currentY = renderTitle(page, normalFont, boldFont, currentY);
-    currentY = renderTopTable(page, normalFont, boldFont, options.formData, currentY);
-    currentY = renderInspectionTable(page, normalFont, boldFont, options.formData, currentY);
-    currentY = renderAdditionalComments(page, normalFont, boldFont, options.formData, currentY);
-    currentY = await renderBottomDecisionBoxes(page, normalFont, boldFont, options.formData, pdfDoc, currentY);
-    renderFooter(page, normalFont);
-    
+    // Save modified PDF
     const pdfBytes = await pdfDoc.save();
     const buffer = pdfBytes.buffer as ArrayBuffer;
     
@@ -100,802 +176,275 @@ export async function generateICS212PDF(
 }
 
 /**
- * Render Title - "Incident Demobilization Vehicle Safety Inspection (ICS 212 WF)"
+ * Overlay all form data onto the template PDF at precise coordinates
  */
-function renderTitle(
-  page: any,
-  normalFont: any,
-  boldFont: any,
-  startY: number
-): number {
-  const { width } = page.getSize();
-  let y = startY;
-  
-  // Main title - centered and bold
-  const titleText = 'Incident Demobilization Vehicle Safety Inspection (ICS 212 WF)';
-  const titleWidth = boldFont.widthOfTextAtSize(titleText, FONTS.title);
-  
-  page.drawText(titleText, {
-    x: (width - titleWidth) / 2,
-    y: y,
-    size: FONTS.title,
-    font: boldFont,
-    color: COLORS.black,
-  });
-  
-  y -= 18;
-  
-  // Subtitle - centered
-  const subtitleText = 'Vehicle Operator: Complete items above double lines prior to inspection';
-  const subtitleWidth = normalFont.widthOfTextAtSize(subtitleText, FONTS.subtitle);
-  
-  page.drawText(subtitleText, {
-    x: (width - subtitleWidth) / 2,
-    y: y,
-    size: FONTS.subtitle,
-    font: boldFont,
-    color: COLORS.black,
-  });
-  
-  return y - 15;
-}
-
-/**
- * Render Top Table - 3 rows with incident and vehicle info
- */
-function renderTopTable(
+async function overlayFormData(
   page: any,
   normalFont: any,
   boldFont: any,
   formData: ICS212FormData,
-  startY: number
-): number {
-  let y = startY;
+  pdfDoc: any
+): Promise<void> {
+  // Top section fields
+  overlayTextField(page, normalFont, FIELD_COORDS.incidentName, formData.incidentName);
+  overlayTextField(page, normalFont, FIELD_COORDS.orderNo, formData.orderNo);
+  overlayTextField(page, normalFont, FIELD_COORDS.vehicleLicenseNo, formData.vehicleLicenseNo);
   
-  const tableWidth = CONTENT_WIDTH;
-  const cellHeight = 20;
+  // Split agency/reg unit
+  const agencyParts = formData.agencyRegUnit?.split('/') || ['', ''];
+  overlayTextField(page, normalFont, FIELD_COORDS.agency, agencyParts[0]);
+  overlayTextField(page, normalFont, FIELD_COORDS.regUnit, agencyParts[1]);
   
-  // Calculate column widths
-  const col1Width = tableWidth * 0.45;
-  const col2Width = tableWidth * 0.25;
-  const col3Width = tableWidth * 0.30;
+  overlayTextField(page, normalFont, FIELD_COORDS.vehicleType, formData.vehicleType);
+  overlayTextField(page, normalFont, FIELD_COORDS.odometerReading, formData.odometerReading?.toString());
+  overlayTextField(page, normalFont, FIELD_COORDS.vehicleIdNo, formData.vehicleIdNo);
   
-  // Row 1: Incident Name (spans 2 cols) | Order No.
-  drawTableCell(page, normalFont, boldFont, MARGINS.left, y, col1Width + col2Width, cellHeight, 
-    'Incident Name', formData.incidentName || '', true);
-  drawTableCell(page, normalFont, boldFont, MARGINS.left + col1Width + col2Width, y, col3Width, cellHeight,
-    'Order No.', formData.orderNo || '', true);
+  // Inspection items - checkboxes and comments
+  overlayInspectionItems(page, normalFont, boldFont, formData.inspectionItems);
   
-  y -= cellHeight;
+  // Additional comments
+  overlayComments(page, normalFont, formData.additionalComments);
   
-  // Row 2: Vehicle License No. | Agency | Reg/Unit
-  drawTableCell(page, normalFont, boldFont, MARGINS.left, y, col1Width, cellHeight,
-    'Vehicle License No.', formData.vehicleLicenseNo || '', true);
-  drawTableCell(page, normalFont, boldFont, MARGINS.left + col1Width, y, col2Width, cellHeight,
-    'Agency', formData.agencyRegUnit?.split('/')[0] || '', true);
-  drawTableCell(page, normalFont, boldFont, MARGINS.left + col1Width + col2Width, y, col3Width, cellHeight,
-    'Reg/Unit', formData.agencyRegUnit?.split('/')[1] || '', true);
-  
-  y -= cellHeight;
-  
-  // Row 3: Type (Eng., Bus., Sedan) | Odometer Reading | Veh. ID No.
-  drawTableCell(page, normalFont, boldFont, MARGINS.left, y, col1Width, cellHeight,
-    'Type (Eng., Bus., Sedan)', formData.vehicleType || '', true);
-  drawTableCell(page, normalFont, boldFont, MARGINS.left + col1Width, y, col2Width, cellHeight,
-    'Odometer Reading', formData.odometerReading?.toString() || '', true);
-  drawTableCell(page, normalFont, boldFont, MARGINS.left + col1Width + col2Width, y, col3Width, cellHeight,
-    'Veh. ID No.', formData.vehicleIdNo || '', true);
-  
-  return y - 10;
+  // Bottom decision boxes
+  await overlayDecisionBoxes(page, normalFont, boldFont, formData, pdfDoc);
 }
 
 /**
- * Render Inspection Items Table with 17 items
+ * Overlay a text field at specified coordinates
  */
-function renderInspectionTable(
+function overlayTextField(
+  page: any,
+  font: any,
+  coords: { x: number; y: number },
+  value: string | undefined
+): void {
+  if (!value) return;
+  
+  page.drawText(value, {
+    x: coords.x,
+    y: coords.y,
+    size: FONTS.data,
+    font: font,
+    color: COLORS.black,
+  });
+}
+
+/**
+ * Overlay inspection items with Pass/Fail checkboxes and comments
+ */
+function overlayInspectionItems(
   page: any,
   normalFont: any,
   boldFont: any,
-  formData: ICS212FormData,
-  startY: number
-): number {
-  let y = startY;
-  
-  const tableWidth = CONTENT_WIDTH;
-  const rowHeight = 16;
-  
-  // Column widths
-  const itemColWidth = tableWidth * 0.55;
-  const checkboxColWidth = (tableWidth * 0.15);
-  const commentColWidth = tableWidth * 0.30;
-  
-  // Header row - no background
-  page.drawRectangle({
-    x: MARGINS.left,
-    y: y - rowHeight,
-    width: tableWidth,
-    height: rowHeight,
-    borderColor: COLORS.borderGray,
-    borderWidth: 1,
-  });
-  
-  // Draw vertical lines for header
-  page.drawLine({
-    start: { x: MARGINS.left + itemColWidth, y: y },
-    end: { x: MARGINS.left + itemColWidth, y: y - rowHeight },
-    thickness: 1,
-    color: COLORS.borderGray,
-  });
-  
-  page.drawLine({
-    start: { x: MARGINS.left + itemColWidth + checkboxColWidth, y: y },
-    end: { x: MARGINS.left + itemColWidth + checkboxColWidth, y: y - rowHeight },
-    thickness: 1,
-    color: COLORS.borderGray,
-  });
-  
-  page.drawLine({
-    start: { x: MARGINS.left + itemColWidth + checkboxColWidth * 2, y: y },
-    end: { x: MARGINS.left + itemColWidth + checkboxColWidth * 2, y: y - rowHeight },
-    thickness: 1,
-    color: COLORS.borderGray,
-  });
-  
-  // Header text
-  page.drawText('Inspection Items', {
-    x: MARGINS.left + 3,
-    y: y - 11,
-    size: FONTS.label,
-    font: boldFont,
-    color: COLORS.black,
-  });
-  
-  page.drawText('Pass', {
-    x: MARGINS.left + itemColWidth + 20,
-    y: y - 11,
-    size: FONTS.label,
-    font: boldFont,
-    color: COLORS.black,
-  });
-  
-  page.drawText('Fail', {
-    x: MARGINS.left + itemColWidth + checkboxColWidth + 25,
-    y: y - 11,
-    size: FONTS.label,
-    font: boldFont,
-    color: COLORS.black,
-  });
-  
-  page.drawText('Comments', {
-    x: MARGINS.left + itemColWidth + checkboxColWidth * 2 + 35,
-    y: y - 11,
-    size: FONTS.label,
-    font: boldFont,
-    color: COLORS.black,
-  });
-  
-  y -= rowHeight;
-  
-  // Official 17 inspection items
-  const officialItems = [
-    '1. Gauges and lights.   See back*',
-    '2. Seat belts.   See back*',
-    '3. Glass and mirrors.   See back*',
-    '4. Wipers and horn.   See back*',
-    '5. Engine compartment.   See back*',
-    '6. Fuel System.   See back*',
-    '7. Steering.   See back*',
-    '8. Brakes.   See back*',
-    '9. Drive line U-joints.   Check play',
-    '10.   Springs and shocks.   See back*',
-    '11.   Exhaust system.   See back*',
-    '12.   Frame.   See back*',
-    '13.   Tire and wheels.   See back*',
-    '14.   Coupling devices.',
-    '       Emergency exit (buses)',
-    '15.   Pump operation',
-    '16.   Damage on incident',
-    '17.   Other',
-  ];
-  
-  // Render each inspection item row
-  for (let i = 0; i < 17; i++) {
-    const item = formData.inspectionItems[i];
-    const itemText = officialItems[i];
+  items: InspectionItem[]
+): void {
+  for (let i = 0; i < Math.min(items.length, 17); i++) {
+    const item = items[i];
+    const coords = FIELD_COORDS.inspectionItems[i];
     
-    // Draw row background (light blue)
-    page.drawRectangle({
-      x: MARGINS.left,
-      y: y - rowHeight,
-      width: tableWidth,
-      height: rowHeight,
-      color: COLORS.lightBlue,
-      borderColor: COLORS.borderGray,
-      borderWidth: 1,
-    });
+    if (!item || !coords) continue;
     
-    // Draw vertical dividers
-    page.drawLine({
-      start: { x: MARGINS.left + itemColWidth, y: y },
-      end: { x: MARGINS.left + itemColWidth, y: y - rowHeight },
-      thickness: 1,
-      color: COLORS.borderGray,
-    });
-    
-    page.drawLine({
-      start: { x: MARGINS.left + itemColWidth + checkboxColWidth, y: y },
-      end: { x: MARGINS.left + itemColWidth + checkboxColWidth, y: y - rowHeight },
-      thickness: 1,
-      color: COLORS.borderGray,
-    });
-    
-    page.drawLine({
-      start: { x: MARGINS.left + itemColWidth + checkboxColWidth * 2, y: y },
-      end: { x: MARGINS.left + itemColWidth + checkboxColWidth * 2, y: y - rowHeight },
-      thickness: 1,
-      color: COLORS.borderGray,
-    });
-    
-    // Item text
-    page.drawText(itemText, {
-      x: MARGINS.left + 3,
-      y: y - 11,
-      size: FONTS.small,
-      font: normalFont,
-      color: COLORS.black,
-    });
-    
-    // Draw checkboxes and marks
-    const checkSize = 8;
-    const passCheckX = MARGINS.left + itemColWidth + 30;
-    const failCheckX = MARGINS.left + itemColWidth + checkboxColWidth + 30;
-    const checkY = y - 12;
-    
-    // Pass checkbox
-    page.drawRectangle({
-      x: passCheckX,
-      y: checkY,
-      width: checkSize,
-      height: checkSize,
-      borderColor: COLORS.black,
-      borderWidth: 0.5,
-      color: COLORS.white,
-    });
-    
-    if (item && item.status === 'pass') {
+    // Draw Pass checkbox 'X'
+    if (item.status === 'pass') {
       page.drawText('X', {
-        x: passCheckX + 1.5,
-        y: checkY + 1,
-        size: FONTS.small,
+        x: coords.passX,
+        y: coords.y,
+        size: FONTS.checkbox,
         font: boldFont,
         color: COLORS.black,
       });
     }
     
-    // Fail checkbox
-    page.drawRectangle({
-      x: failCheckX,
-      y: checkY,
-      width: checkSize,
-      height: checkSize,
-      borderColor: COLORS.black,
-      borderWidth: 0.5,
-      color: COLORS.white,
-    });
-    
-    if (item && item.status === 'fail') {
+    // Draw Fail checkbox 'X'
+    if (item.status === 'fail') {
       page.drawText('X', {
-        x: failCheckX + 1.5,
-        y: checkY + 1,
-        size: FONTS.small,
+        x: coords.failX,
+        y: coords.y,
+        size: FONTS.checkbox,
         font: boldFont,
         color: COLORS.black,
       });
     }
     
-    // Comments (if any)
-    if (item && item.comments) {
-      const commentText = item.comments.substring(0, 25); // Limit length
+    // Draw comments if present
+    if (item.comments) {
+      const commentText = item.comments.substring(0, 20); // Limit length to fit
       page.drawText(commentText, {
-        x: MARGINS.left + itemColWidth + checkboxColWidth * 2 + 3,
-        y: y - 11,
-        size: FONTS.tiny,
-        font: normalFont,
-        color: COLORS.black,
-      });
-    }
-    
-    y -= rowHeight;
-  }
-  
-  // Safety item footnote
-  page.drawText('*Safety Item – Do Not Release Until Repaired', {
-    x: MARGINS.left,
-    y: y - 10,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  return y - 15;
-}
-
-/**
- * Render Additional Comments section with lined paper effect
- */
-function renderAdditionalComments(
-  page: any,
-  normalFont: any,
-  boldFont: any,
-  formData: ICS212FormData,
-  startY: number
-): number {
-  let y = startY;
-  
-  // Header
-  page.drawText('Additional Comments:', {
-    x: MARGINS.left,
-    y: y,
-    size: FONTS.label,
-    font: boldFont,
-    color: COLORS.black,
-  });
-  
-  y -= 15;
-  
-  // Draw comment box with lines
-  const boxHeight = 70;
-  const lineSpacing = 12;
-  
-  // Background
-  page.drawRectangle({
-    x: MARGINS.left,
-    y: y - boxHeight,
-    width: CONTENT_WIDTH,
-    height: boxHeight,
-    color: COLORS.lightBlue,
-    borderColor: COLORS.borderGray,
-    borderWidth: 1,
-  });
-  
-  // Horizontal lines for writing
-  for (let i = 0; i < 5; i++) {
-    const lineY = y - 10 - (i * lineSpacing);
-    page.drawLine({
-      start: { x: MARGINS.left + 5, y: lineY },
-      end: { x: MARGINS.left + CONTENT_WIDTH - 5, y: lineY },
-      thickness: 0.3,
-      color: COLORS.darkGray,
-    });
-  }
-  
-  // Render comments if present
-  if (formData.additionalComments) {
-    const lines = formData.additionalComments.split('\n');
-    let commentY = y - 8;
-    
-    lines.slice(0, 5).forEach((line) => {
-      page.drawText(line.substring(0, 80), {
-        x: MARGINS.left + 5,
-        y: commentY,
+        x: coords.commentX,
+        y: coords.y,
         size: FONTS.small,
         font: normalFont,
         color: COLORS.black,
       });
-      commentY -= lineSpacing;
-    });
+    }
   }
-  
-  return y - boxHeight - 15;
 }
 
 /**
- * Render bottom decision boxes - HOLD FOR REPAIRS / RELEASE
+ * Overlay additional comments with line wrapping
  */
-async function renderBottomDecisionBoxes(
+function overlayComments(
+  page: any,
+  font: any,
+  comments: string | undefined
+): void {
+  if (!comments) return;
+  
+  const coords = FIELD_COORDS.additionalComments;
+  const lines = comments.split('\n');
+  let y = coords.y;
+  
+  for (const line of lines.slice(0, 5)) {  // Max 5 lines
+    if (line.trim()) {
+      page.drawText(line.substring(0, 80), {  // Max 80 chars per line
+        x: coords.x,
+        y: y,
+        size: FONTS.small,
+        font: font,
+        color: COLORS.black,
+      });
+    }
+    y -= coords.lineHeight;
+  }
+}
+
+/**
+ * Overlay decision boxes (HOLD FOR REPAIRS / RELEASE) with checkboxes and signatures
+ */
+async function overlayDecisionBoxes(
   page: any,
   normalFont: any,
   boldFont: any,
   formData: ICS212FormData,
-  pdfDoc: any,
-  startY: number
-): Promise<number> {
-  let y = startY;
-  
-  const boxWidth = (CONTENT_WIDTH - 10) / 2;
-  const boxHeight = 80;
-  
-  // HOLD FOR REPAIRS box (left side)
-  page.drawRectangle({
-    x: MARGINS.left,
-    y: y - boxHeight,
-    width: boxWidth,
-    height: boxHeight,
-    borderColor: COLORS.borderGray,
-    borderWidth: 2,
-  });
-  
-  // Checkbox for HOLD
-  const holdCheckSize = 10;
-  page.drawRectangle({
-    x: MARGINS.left + 5,
-    y: y - 15,
-    width: holdCheckSize,
-    height: holdCheckSize,
-    borderColor: COLORS.black,
-    borderWidth: 1,
-    color: COLORS.white,
-  });
-  
+  pdfDoc: any
+): Promise<void> {
+  // HOLD FOR REPAIRS checkbox
   if (formData.releaseStatus === 'hold') {
     page.drawText('X', {
-      x: MARGINS.left + 7,
-      y: y - 13,
-      size: FONTS.label,
-      font: boldFont,
-      color: COLORS.black,
-    });
-  }
-  
-  page.drawText('HOLD FOR REPAIRS', {
-    x: MARGINS.left + 20,
-    y: y - 13,
-    size: FONTS.label,
-    font: boldFont,
-    color: COLORS.black,
-  });
-  
-  // Date, Time line
-  page.drawText('Date', {
-    x: MARGINS.left + 5,
-    y: y - 30,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawLine({
-    start: { x: MARGINS.left + 30, y: y - 30 },
-    end: { x: MARGINS.left + 100, y: y - 30 },
-    thickness: 0.5,
-    color: COLORS.black,
-  });
-  
-  page.drawText(new Date(formData.inspectorDate).toLocaleDateString(), {
-    x: MARGINS.left + 35,
-    y: y - 28,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawText('Time', {
-    x: MARGINS.left + 110,
-    y: y - 30,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawLine({
-    start: { x: MARGINS.left + 135, y: y - 30 },
-    end: { x: MARGINS.left + boxWidth - 5, y: y - 30 },
-    thickness: 0.5,
-    color: COLORS.black,
-  });
-  
-  page.drawText(formData.inspectorTime || '', {
-    x: MARGINS.left + 140,
-    y: y - 28,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  // Inspector name line
-  page.drawText('Inspector name (Print)', {
-    x: MARGINS.left + 5,
-    y: y - 45,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawLine({
-    start: { x: MARGINS.left + 5, y: y - 55 },
-    end: { x: MARGINS.left + boxWidth - 5, y: y - 55 },
-    thickness: 0.5,
-    color: COLORS.black,
-  });
-  
-  page.drawText(formData.inspectorNamePrint || '', {
-    x: MARGINS.left + 10,
-    y: y - 53,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  // Inspector signature line
-  page.drawText('Inspector Signature', {
-    x: MARGINS.left + 5,
-    y: y - 60,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawLine({
-    start: { x: MARGINS.left + 5, y: y - 75 },
-    end: { x: MARGINS.left + boxWidth - 5, y: y - 75 },
-    thickness: 0.5,
-    color: COLORS.black,
-  });
-  
-  // Draw inspector signature if present
-  if (formData.inspectorSignature?.imageData) {
-    try {
-      const base64Data = formData.inspectorSignature.imageData.replace(/^data:image\/png;base64,/, '');
-      const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-      const signatureImage = await pdfDoc.embedPng(imageBytes);
-      
-      page.drawImage(signatureImage, {
-        x: MARGINS.left + 10,
-        y: y - 73,
-        width: 100,
-        height: 18,
-      });
-    } catch (error) {
-      // Signature embedding failed - skip
-    }
-  }
-  
-  // RELEASE box (right side)
-  const releaseX = MARGINS.left + boxWidth + 10;
-  
-  page.drawRectangle({
-    x: releaseX,
-    y: y - boxHeight,
-    width: boxWidth,
-    height: boxHeight,
-    borderColor: COLORS.borderGray,
-    borderWidth: 2,
-  });
-  
-  // Checkbox for RELEASE
-  page.drawRectangle({
-    x: releaseX + 5,
-    y: y - 15,
-    width: holdCheckSize,
-    height: holdCheckSize,
-    borderColor: COLORS.black,
-    borderWidth: 1,
-    color: COLORS.white,
-  });
-  
-  if (formData.releaseStatus === 'release') {
-    page.drawText('X', {
-      x: releaseX + 7,
-      y: y - 13,
-      size: FONTS.label,
-      font: boldFont,
-      color: COLORS.black,
-    });
-  }
-  
-  page.drawText('RELEASE', {
-    x: releaseX + 20,
-    y: y - 13,
-    size: FONTS.label,
-    font: boldFont,
-    color: COLORS.black,
-  });
-  
-  // Date, Time line
-  page.drawText('Date', {
-    x: releaseX + 5,
-    y: y - 30,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawLine({
-    start: { x: releaseX + 30, y: y - 30 },
-    end: { x: releaseX + 100, y: y - 30 },
-    thickness: 0.5,
-    color: COLORS.black,
-  });
-  
-  page.drawText(formData.operatorDate ? new Date(formData.operatorDate).toLocaleDateString() : '', {
-    x: releaseX + 35,
-    y: y - 28,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawText('Time', {
-    x: releaseX + 110,
-    y: y - 30,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawLine({
-    start: { x: releaseX + 135, y: y - 30 },
-    end: { x: releaseX + boxWidth - 5, y: y - 30 },
-    thickness: 0.5,
-    color: COLORS.black,
-  });
-  
-  page.drawText(formData.operatorTime || '', {
-    x: releaseX + 140,
-    y: y - 28,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  // Operator name line
-  page.drawText('Operator Name (Print)', {
-    x: releaseX + 5,
-    y: y - 45,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawLine({
-    start: { x: releaseX + 5, y: y - 55 },
-    end: { x: releaseX + boxWidth - 5, y: y - 55 },
-    thickness: 0.5,
-    color: COLORS.black,
-  });
-  
-  page.drawText(formData.operatorNamePrint || '', {
-    x: releaseX + 10,
-    y: y - 53,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  // Operator signature line
-  page.drawText('Operator Signature', {
-    x: releaseX + 5,
-    y: y - 60,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  page.drawLine({
-    start: { x: releaseX + 5, y: y - 75 },
-    end: { x: releaseX + boxWidth - 5, y: y - 75 },
-    thickness: 0.5,
-    color: COLORS.black,
-  });
-  
-  // Draw operator signature if present
-  if (formData.operatorSignature?.imageData) {
-    try {
-      const base64Data = formData.operatorSignature.imageData.replace(/^data:image\/png;base64,/, '');
-      const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-      const signatureImage = await pdfDoc.embedPng(imageBytes);
-      
-      page.drawImage(signatureImage, {
-        x: releaseX + 10,
-        y: y - 73,
-        width: 100,
-        height: 18,
-      });
-    } catch (error) {
-      // Signature embedding failed - skip
-    }
-  }
-  
-  return y - boxHeight - 10;
-}
-
-/**
- * Render footer with distribution info and form identifiers
- */
-function renderFooter(page: any, normalFont: any): void {
-  const footerY = MARGINS.bottom + 20;
-  
-  // Distribution line 1
-  page.drawText('This form may be photocopied, but three copies must be completed.', {
-    x: MARGINS.left,
-    y: footerY + 10,
-    size: FONTS.tiny,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  // Distribution line 2
-  page.drawText('Distribution: Original to inspector, copy to vehicle operator, copy to Incident Document Unit', {
-    x: MARGINS.left,
-    y: footerY,
-    size: FONTS.tiny,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  // Bottom left: ICS 212 WF (1/14)
-  page.drawText('ICS 212 WF (1/14)', {
-    x: MARGINS.left,
-    y: MARGINS.bottom,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  // Bottom right: NFES 001251
-  page.drawText('NFES 001251', {
-    x: PAGE_SIZE.width - MARGINS.right - normalFont.widthOfTextAtSize('NFES 001251', FONTS.small),
-    y: MARGINS.bottom,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-}
-
-/**
- * Helper: Draw a table cell with label and value
- */
-function drawTableCell(
-  page: any,
-  normalFont: any,
-  boldFont: any,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  label: string,
-  value: string,
-  hasBackground: boolean
-): void {
-  // Draw cell background (light blue)
-  if (hasBackground) {
-    page.drawRectangle({
-      x: x,
-      y: y - height,
-      width: width,
-      height: height,
-      color: COLORS.lightBlue,
-      borderColor: COLORS.borderGray,
-      borderWidth: 1,
-    });
-  } else {
-    page.drawRectangle({
-      x: x,
-      y: y - height,
-      width: width,
-      height: height,
-      borderColor: COLORS.borderGray,
-      borderWidth: 1,
-    });
-  }
-  
-  // Draw label
-  page.drawText(label, {
-    x: x + 3,
-    y: y - 10,
-    size: FONTS.small,
-    font: normalFont,
-    color: COLORS.black,
-  });
-  
-  // Draw value (if present)
-  if (value) {
-    page.drawText(value, {
-      x: x + 3,
-      y: y - height + 4,
+      x: FIELD_COORDS.holdForRepairs.checkbox.x,
+      y: FIELD_COORDS.holdForRepairs.checkbox.y,
       size: FONTS.data,
       font: boldFont,
       color: COLORS.black,
     });
+  }
+  
+  // HOLD FOR REPAIRS - Date, Time, Name
+  if (formData.inspectorDate) {
+    page.drawText(new Date(formData.inspectorDate).toLocaleDateString(), {
+      x: FIELD_COORDS.holdForRepairs.date.x,
+      y: FIELD_COORDS.holdForRepairs.date.y,
+      size: FONTS.small,
+      font: normalFont,
+      color: COLORS.black,
+    });
+  }
+  
+  if (formData.inspectorTime) {
+    page.drawText(formData.inspectorTime, {
+      x: FIELD_COORDS.holdForRepairs.time.x,
+      y: FIELD_COORDS.holdForRepairs.time.y,
+      size: FONTS.small,
+      font: normalFont,
+      color: COLORS.black,
+    });
+  }
+  
+  if (formData.inspectorNamePrint) {
+    page.drawText(formData.inspectorNamePrint, {
+      x: FIELD_COORDS.holdForRepairs.inspectorName.x,
+      y: FIELD_COORDS.holdForRepairs.inspectorName.y,
+      size: FONTS.small,
+      font: normalFont,
+      color: COLORS.black,
+    });
+  }
+  
+  // Inspector signature image
+  if (formData.inspectorSignature?.imageData) {
+    await drawSignature(
+      page,
+      pdfDoc,
+      formData.inspectorSignature,
+      FIELD_COORDS.holdForRepairs.inspectorSignature
+    );
+  }
+  
+  // RELEASE checkbox
+  if (formData.releaseStatus === 'release') {
+    page.drawText('X', {
+      x: FIELD_COORDS.release.checkbox.x,
+      y: FIELD_COORDS.release.checkbox.y,
+      size: FONTS.data,
+      font: boldFont,
+      color: COLORS.black,
+    });
+  }
+  
+  // RELEASE - Date, Time, Name
+  if (formData.operatorDate) {
+    page.drawText(new Date(formData.operatorDate).toLocaleDateString(), {
+      x: FIELD_COORDS.release.date.x,
+      y: FIELD_COORDS.release.date.y,
+      size: FONTS.small,
+      font: normalFont,
+      color: COLORS.black,
+    });
+  }
+  
+  if (formData.operatorTime) {
+    page.drawText(formData.operatorTime, {
+      x: FIELD_COORDS.release.time.x,
+      y: FIELD_COORDS.release.time.y,
+      size: FONTS.small,
+      font: normalFont,
+      color: COLORS.black,
+    });
+  }
+  
+  if (formData.operatorNamePrint) {
+    page.drawText(formData.operatorNamePrint, {
+      x: FIELD_COORDS.release.operatorName.x,
+      y: FIELD_COORDS.release.operatorName.y,
+      size: FONTS.small,
+      font: normalFont,
+      color: COLORS.black,
+    });
+  }
+  
+  // Operator signature image
+  if (formData.operatorSignature?.imageData) {
+    await drawSignature(
+      page,
+      pdfDoc,
+      formData.operatorSignature,
+      FIELD_COORDS.release.operatorSignature
+    );
+  }
+}
+
+/**
+ * Draw signature image at specified coordinates
+ */
+async function drawSignature(
+  page: any,
+  pdfDoc: any,
+  signature: DigitalSignature,
+  coords: { x: number; y: number; width: number; height: number }
+): Promise<void> {
+  try {
+    const base64Data = signature.imageData.replace(/^data:image\/png;base64,/, '');
+    const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    const signatureImage = await pdfDoc.embedPng(imageBytes);
+    
+    page.drawImage(signatureImage, {
+      x: coords.x,
+      y: coords.y,
+      width: coords.width,
+      height: coords.height,
+    });
+  } catch (error) {
+    console.error('Failed to embed signature:', error);
+    // Skip signature if embedding fails
   }
 }

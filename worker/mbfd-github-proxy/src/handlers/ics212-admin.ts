@@ -798,9 +798,14 @@ async function handleRegeneratePDF(
     };
 
     // Generate PDF using existing generator
+    if (!env.USAR_FORMS) {
+      throw new Error('R2 bucket not configured - USAR_FORMS binding missing');
+    }
+    
     const pdfResult = await generateICS212PDF({
       formData: formData as any,
       includeSignatures: true,
+      r2Bucket: env.USAR_FORMS,
     });
 
     console.log(`PDF regenerated: ${(pdfResult.size / 1024).toFixed(2)} KB`);
