@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -10,8 +10,25 @@ const HomePage = lazy(() => import('./components/HomePage'));
 const FormsHub = lazy(() => import('./components/FormsHub'));
 const ICS212Form = lazy(() => import('./components/ICS212Form'));
 const ICS218Form = lazy(() => import('./components/ics218/ICS218Form'));
+
+// Admin Components
+const AdminHub = lazy(() => import('./components/admin/AdminHub').then(m => ({ default: m.AdminHub })));
 const ICS212AdminDashboard = lazy(() => import('./components/admin/ICS212AdminDashboard').then(m => ({ default: m.ICS212AdminDashboard })));
-const DashboardHome = lazy(() => import('./components/admin/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
+const ICS218AdminDashboard = lazy(() => import('./components/admin/ICS218AdminDashboard').then(m => ({ default: m.ICS218AdminDashboard })));
+const DocumentManagement = lazy(() => import('./components/admin/DocumentManagement').then(m => ({ default: m.DocumentManagement })));
+const FormDetail = lazy(() => import('./components/admin/FormDetail').then(m => ({ default: m.FormDetail })));
+const ICS218Detail = lazy(() => import('./components/admin/ICS218Detail').then(m => ({ default: m.ICS218Detail })));
+
+// Wrapper components to extract URL params
+function FormDetailWrapper() {
+  const { id } = useParams<{ id: string }>();
+  return <FormDetail formId={id || ''} />;
+}
+
+function ICS218DetailWrapper() {
+  const { id } = useParams<{ id: string }>();
+  return <ICS218Detail formId={id || ''} />;
+}
 
 // Create QueryClient for React Query  
 const queryClient = new QueryClient({
@@ -51,19 +68,53 @@ function App() {
                 </ICS218Auth>
               } 
             />
+            
+            {/* Admin Routes */}
             <Route 
               path="/admin" 
               element={
                 <AdminAuth>
-                  <DashboardHome />
+                  <AdminHub />
                 </AdminAuth>
               } 
             />
             <Route 
-              path="/admin/forms" 
+              path="/admin/ics212" 
               element={
                 <AdminAuth>
                   <ICS212AdminDashboard />
+                </AdminAuth>
+              } 
+            />
+            <Route 
+              path="/admin/ics212/:id" 
+              element={
+                <AdminAuth>
+                  <FormDetailWrapper />
+                </AdminAuth>
+              } 
+            />
+            <Route 
+              path="/admin/ics218" 
+              element={
+                <AdminAuth>
+                  <ICS218AdminDashboard />
+                </AdminAuth>
+              } 
+            />
+            <Route 
+              path="/admin/ics218/:id" 
+              element={
+                <AdminAuth>
+                  <ICS218DetailWrapper />
+                </AdminAuth>
+              } 
+            />
+            <Route 
+              path="/admin/documents" 
+              element={
+                <AdminAuth>
+                  <DocumentManagement />
                 </AdminAuth>
               } 
             />
@@ -71,6 +122,7 @@ function App() {
             {/* Redirect old routes to new structure */}
             <Route path="/inspection" element={<Navigate to="/form" replace />} />
             <Route path="/ics212" element={<Navigate to="/form" replace />} />
+            <Route path="/admin/forms" element={<Navigate to="/admin/ics212" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
