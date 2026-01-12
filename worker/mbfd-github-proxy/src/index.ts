@@ -125,7 +125,8 @@ const REPO_NAME = 'mbfd-checkout-system';
 const ALLOWED_ORIGINS = [
   'https://pdarleyjr.github.io',
   'https://usar-ics212.pages.dev',
-  'https://56a46871.usar-ics212.pages.dev', // Production deployment
+  'https://production.usar-ics212.pages.dev', // Production deployment URL
+  'https://56a46871.usar-ics212.pages.dev', // Legacy production deployment
   'http://localhost:5173', // For local development
 ];
 
