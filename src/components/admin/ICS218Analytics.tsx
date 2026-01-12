@@ -14,8 +14,7 @@
 import { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  Legend 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { SkeletonLoader } from '../mobile/SkeletonLoader';
 import { Download, Package, AlertTriangle, TrendingUp } from 'lucide-react';
@@ -235,7 +234,7 @@ export function ICS218Analytics() {
                 fill="#8884d8"
                 dataKey="count"
               >
-                {analytics.formsByCategory.map((entry, index) => (
+                {analytics.formsByCategory.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

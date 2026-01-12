@@ -14,8 +14,7 @@
 import { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  Legend 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { SkeletonLoader } from '../mobile/SkeletonLoader';
 import { Download, TrendingUp, AlertTriangle } from 'lucide-react';
@@ -34,7 +33,6 @@ interface ICS212AnalyticsData {
 export function ICS212Analytics() {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<ICS212AnalyticsData | null>(null);
-  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'all'>('month');
 
   useEffect(() => {
     fetchAnalytics();
