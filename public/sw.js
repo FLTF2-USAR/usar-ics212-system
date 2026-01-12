@@ -1,4 +1,4 @@
-const CACHE_NAME = 'usar-ics212-v2-inspection-fix';
+const CACHE_NAME = 'usar-ics212-v3-coordinates-fix';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -25,6 +25,20 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  
+  // NETWORK-ONLY for API calls - NEVER cache these
+  if (url.pathname.includes('/api/') || url.hostname.includes('workers.dev')) {
+    event.respondWith(
+      fetch(event.request).catch(err => {
+        console.error('[SW] API request failed:', err);
+        return new Response(JSON.stringify({ error: 'Network error', message: err.message }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+       })
+    );
+    return;
+  }
   
   // Network-first for HTML navigation requests (fixes blank page bug)
   if (event.request.mode === 'navigate' || event.request.destination === 'document') {
@@ -81,24 +95,5 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then((response) => response || fetch(event.request))
-  );
-});
-
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activate event - cleaning up old caches');
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      console.log('[SW] Service worker activated and taking control');
-      return self.clients.claim(); // Take control immediately
-    })
   );
 });

@@ -29,7 +29,7 @@ const COLORS = {
 };
 
 // Debug mode - set to true to show coordinate boxes
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;  // ENABLED for alignment verification
 
 /**
  * R2 Bucket Interface
@@ -59,48 +59,53 @@ const FIELD_COORDS = {
   
   // Top section - Row 3 - ADJUSTED: Vehicle ID shifted LEFT 15pt, Odometer shifted UP 5pt
   vehicleType: { x: 60, y: 652 },
-  odometerReading: { x: 285, y: 657 }, // UP 5pt from 652
-  vehicleIdNo: { x: 440, y: 652 },      // LEFT 15pt from 455
+  odometerReading: { x: 335, y: 657 },  // RIGHT +50pt from 285
+  vehicleIdNo: { x: 480, y: 652 },      // RIGHT +40pt from 440
   
-  // Inspection items - ADJUSTED: Pass checkboxes shifted LEFT 45pt (345 → 300)
+  // ITERATION 3 ADJUSTMENTS:
+  // - Vehicle ID: was 440, now 440 + 40 = 480 (RIGHT)
+  // - Odometer: was 285, now 285 + 50 = 335 (RIGHT)
+  
+  // ITERATION 3: Pass checkboxes shifted LEFT 35pt (was 300, now 265)
   inspectionItems: [
-    { passX: 300, failX: 395, commentX: 445, y: 621 },  // 1. Gauges and lights
-    { passX: 300, failX: 395, commentX: 445, y: 605 },  // 2. Seat belts
-    { passX: 300, failX: 395, commentX: 445, y: 589 },  // 3. Glass and mirrors
-    { passX: 300, failX: 395, commentX: 445, y: 573 },  // 4. Wipers and horn
-    { passX: 300, failX: 395, commentX: 445, y: 557 },  // 5. Engine compartment
-    { passX: 300, failX: 395, commentX: 445, y: 541 },  // 6. Fuel System
-    { passX: 300, failX: 395, commentX: 445, y: 525 },  // 7. Steering
-    { passX: 300, failX: 395, commentX: 445, y: 509 },  // 8. Brakes
-    { passX: 300, failX: 395, commentX: 445, y: 493 },  // 9. Drive line U-joints
-    { passX: 300, failX: 395, commentX: 445, y: 477 },  // 10. Springs and shocks
-    { passX: 300, failX: 395, commentX: 445, y: 461 },  // 11. Exhaust system
-    { passX: 300, failX: 395, commentX: 445, y: 445 },  // 12. Frame
-    { passX: 300, failX: 395, commentX: 445, y: 429 },  // 13. Tire and wheels
-    { passX: 300, failX: 395, commentX: 445, y: 413 },  // 14. Coupling devices / Emergency exit
-    { passX: 300, failX: 395, commentX: 445, y: 397 },  // 15. Pump operation
-    { passX: 300, failX: 395, commentX: 445, y: 381 },  // 16. Damage on incident
-    { passX: 300, failX: 395, commentX: 445, y: 365 },  // 17. Other
+    { passX: 265, failX: 395, commentX: 445, y: 621 },  // 1. Seat belts
+    { passX: 265, failX: 395, commentX: 445, y: 604 },  // 2. Windshield/windows
+    { passX: 265, failX: 395, commentX: 445, y: 587 },  // 3. Mirrors
+    { passX: 265, failX: 395, commentX: 445, y: 570 },  // 4. Horn
+    { passX: 265, failX: 395, commentX: 445, y: 553 },  // 5. Lights
+    { passX: 265, failX: 395, commentX: 445, y: 536 },  // 6. Turn signals
+    { passX: 265, failX: 395, commentX: 445, y: 519 },  // 7. Tires
+    { passX: 265, failX: 395, commentX: 445, y: 502 },  // 8. Wheel lug nuts
+    { passX: 265, failX: 395, commentX: 445, y: 485 },  // 9. Brakes (service and parking)
+    { passX: 265, failX: 395, commentX: 445, y: 468 },  // 10. Fluid levels
+    { passX: 265, failX: 395, commentX: 445, y: 451 },  // 11. Leaks
+    { passX: 265, failX: 395, commentX: 445, y: 434 },  // 12. Loose parts
+    { passX: 265, failX: 395, commentX: 445, y: 417 },  // 13. Fire extinguisher(s)
+    { passX: 265, failX: 395, commentX: 445, y: 400 },  // 14. First aid kit
+    { passX: 265, failX: 395, commentX: 445, y: 383 },  // 15. Accident prevention
+    { passX: 265, failX: 395, commentX: 445, y: 366 },  // 16. Spill kit
+    { passX: 265, failX: 395, commentX: 445, y: 349 },  // 17. Radio communications
   ],
 
   // Additional Comments section (starts below "Additional Comments:" label)
   additionalComments: { x: 60, y: 328, maxWidth: 500, lineHeight: 12 },
 
-  // Bottom decision boxes - ADJUSTED: All Y coordinates shifted UP by 20pts
+  // ITERATION 3: Footer shifted UP 25pt (y-coordinates increased by 25)
+  // Footer dates shifted LEFT 50pt (x-coordinates decreased by 50)
   holdForRepairs: {
-    checkbox: { x: 60, y: 257 },          // UP 20pt from 237
-    date: { x: 95, y: 238 },              // UP 20pt from 218
-    time: { x: 185, y: 238 },             // UP 20pt from 218
-    inspectorName: { x: 95, y: 218 },     // UP 20pt from 198
-    inspectorSignature: { x: 95, y: 188, width: 150, height: 25 },  // UP 20pt from 168
+    checkbox: { x: 60, y: 282 },     // UP 25pt from 257
+    date: { x: 45, y: 263 },         // UP 25pt from 238, LEFT 50pt from 95
+    time: { x: 120, y: 263 },        // Time field next to date
+    inspectorName: { x: 95, y: 243 }, // UP 25pt from 218
+    inspectorSignature: { x: 95, y: 213, width: 150, height: 25 },  // UP 25pt from 188
   },
 
-  release: {
-    checkbox: { x: 345, y: 257 },         // UP 20pt from 237
-    date: { x: 380, y: 238 },             // UP 20pt from 218
-    time: { x: 470, y: 238 },             // UP 20pt from 218
-    operatorName: { x: 380, y: 218 },     // UP 20pt from 198
-    operatorSignature: { x: 380, y: 188, width: 150, height: 25 },  // UP 20pt from 168
+  releaseForUse: {
+    checkbox: { x: 305, y: 282 },    // UP 25pt from 257
+    date: { x: 290, y: 263 },        // UP 25pt from 238, LEFT 50pt from 340
+    time: { x: 365, y: 263 },        // Time field next to date
+    operatorName: { x: 340, y: 243 },// UP 25pt from 218
+    operatorSignature: { x: 340, y: 213, width: 150, height: 25 },  // UP 25pt from 188
   },
 };
 
@@ -438,8 +443,8 @@ async function overlayDecisionBoxes(
   // RELEASE checkbox
   if (formData.releaseStatus === 'release') {
     page.drawText('X', {
-      x: FIELD_COORDS.release.checkbox.x,
-      y: FIELD_COORDS.release.checkbox.y,
+      x: FIELD_COORDS.releaseForUse.checkbox.x,
+      y: FIELD_COORDS.releaseForUse.checkbox.y,
       size: FONTS.data,
       font: boldFont,
       color: COLORS.black,
@@ -449,8 +454,8 @@ async function overlayDecisionBoxes(
   // RELEASE - Date, Time, Name
   if (formData.operatorDate) {
     page.drawText(new Date(formData.operatorDate).toLocaleDateString(), {
-      x: FIELD_COORDS.release.date.x,
-      y: FIELD_COORDS.release.date.y,
+      x: FIELD_COORDS.releaseForUse.date.x,
+      y: FIELD_COORDS.releaseForUse.date.y,
       size: FONTS.small,
       font: normalFont,
       color: COLORS.black,
@@ -459,8 +464,8 @@ async function overlayDecisionBoxes(
   
   if (formData.operatorTime) {
     page.drawText(formData.operatorTime, {
-      x: FIELD_COORDS.release.time.x,
-      y: FIELD_COORDS.release.time.y,
+      x: FIELD_COORDS.releaseForUse.time.x,
+      y: FIELD_COORDS.releaseForUse.time.y,
       size: FONTS.small,
       font: normalFont,
       color: COLORS.black,
@@ -469,8 +474,8 @@ async function overlayDecisionBoxes(
   
   if (formData.operatorNamePrint) {
     page.drawText(formData.operatorNamePrint, {
-      x: FIELD_COORDS.release.operatorName.x,
-      y: FIELD_COORDS.release.operatorName.y,
+      x: FIELD_COORDS.releaseForUse.operatorName.x,
+      y: FIELD_COORDS.releaseForUse.operatorName.y,
       size: FONTS.small,
       font: normalFont,
       color: COLORS.black,
@@ -483,7 +488,7 @@ async function overlayDecisionBoxes(
       page,
       pdfDoc,
       formData.operatorSignature,
-      FIELD_COORDS.release.operatorSignature
+      FIELD_COORDS.releaseForUse.operatorSignature
     );
   }
 }
