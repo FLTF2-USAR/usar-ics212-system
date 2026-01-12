@@ -402,17 +402,26 @@ export const ICS212Form: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400 mb-6">
                 Your ICS-212 form has been successfully submitted and logged.
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSubmitted(false);
-                  setFormData(INITIAL_FORM_DATA);
-                  setCurrentStep(0);
-                }}
-                className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors"
-              >
-                Start New Form
-              </button>
+              <div className="flex gap-3">
+                <a
+                  href="/"
+                  className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  Back to Home
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSubmitted(false);
+                    setFormData(INITIAL_FORM_DATA);
+                    setCurrentStep(0);
+                  }}
+                  className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors"
+                >
+                  Start New Form
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

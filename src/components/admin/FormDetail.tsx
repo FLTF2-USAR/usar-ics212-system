@@ -42,9 +42,8 @@ export function FormDetail({ formId }: FormDetailProps) {
   };
 
   const handleDownloadPDF = () => {
-    if (form?.pdf_url) {
-      window.open(form.pdf_url, '_blank');
-    }
+    const downloadUrl = `${API_BASE_URL}/ics212/pdf?formId=${formId}`;
+    window.open(downloadUrl, '_blank');
   };
 
   if (loading) {
@@ -66,6 +65,9 @@ export function FormDetail({ formId }: FormDetailProps) {
     );
   }
 
+  // Construct PDF preview URL from form ID
+  const pdfPreviewUrl = form.pdf_url ? `${API_BASE_URL}/ics212/pdf/preview?formId=${formId}` : null;
+
   return (
     <div className="space-y-4 max-h-[80vh] overflow-y-auto">
       {/* Header */}
@@ -86,11 +88,11 @@ export function FormDetail({ formId }: FormDetailProps) {
       </div>
 
       {/* PDF Preview */}
-      {form.pdf_url && (
+      {pdfPreviewUrl ? (
         <div className="px-4">
           <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900">
             <iframe
-              src={form.pdf_url}
+              src={pdfPreviewUrl}
               className="w-full"
               style={{ height: '400px' }}
               title="PDF Preview"
@@ -104,6 +106,14 @@ export function FormDetail({ formId }: FormDetailProps) {
               📥 Download PDF
             </button>
           </TouchFeedback>
+        </div>
+      ) : (
+        <div className="px-4">
+          <div className="border border-yellow-300 dark:border-yellow-600 rounded-lg p-4 bg-yellow-50 dark:bg-yellow-900/20">
+            <p className="text-yellow-800 dark:text-yellow-200 text-sm">
+              ⚠️ PDF not available. It may still be generating or there was an error during submission.
+            </p>
+          </div>
         </div>
       )}
 
