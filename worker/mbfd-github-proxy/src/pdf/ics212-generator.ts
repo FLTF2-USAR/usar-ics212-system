@@ -443,7 +443,7 @@ function renderInspectionGrid(
   
   formData.inspectionItems.forEach((item: InspectionItem, index: number) => {
     // Safety item marker
-    const safetyMarker = item.isSafetyItem ? '⚠ ' : '';
+    const safetyMarker = item.isSafetyItem ? '[SAFETY] ' : '';
     
     // Item description with number
     const itemText = `${item.itemNumber}. ${safetyMarker}${item.description}`;
@@ -629,7 +629,7 @@ function renderReleaseDecision(
   y -= 25;
   
   const isHold = formData.releaseStatus === 'hold';
-  const decisionText = isHold ? '🔴 HOLD FOR REPAIRS' : '🟢 RELEASED';
+  const decisionText = isHold ? 'HOLD FOR REPAIRS' : 'RELEASED';
   const boxWidth = 220;
   const boxHeight = 35;
   
