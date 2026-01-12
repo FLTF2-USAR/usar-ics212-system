@@ -57,30 +57,29 @@ const FIELD_COORDS = {
   agency: { x: 285, y: 674 },
   regUnit: { x: 455, y: 674 },
   
-  // ITERATION 5: Odometer and Vehicle ID DOWN 0.5" (36pt)
+  // ITERATION 6: Reset to Iteration 4 baseline (655/650), then DOWN 1/8" (9pt)
   vehicleType: { x: 60, y: 652 },
-  odometerReading: { x: 335, y: 619 },  // DOWN 36pt from 655
-  vehicleIdNo: { x: 480, y: 614 },      // DOWN 36pt from 650
+  odometerReading: { x: 335, y: 646 },  // 655 - 9 = 646
+  vehicleIdNo: { x: 480, y: 641 },      // 650 - 9 = 641
   
-  // ITERATION 5: ALL checkboxes DOWN 1" (72pt) + RIGHT 0.25" (18pt)
+  // ITERATION 6: Reset to Iteration 4 baseline (265/395), then DOWN 0.25" (18pt) + RIGHT 1/8" (9pt)
   inspectionItems: [
-    { passX: 283, failX: 413, commentX: 445, y: 549 },  // DOWN 72pt from 621, RIGHT 18pt (265→283, 395→413)
-    { passX: 283, failX: 413, commentX: 445, y: 532 },  // DOWN 72pt from 604
-    { passX: 283, failX: 413, commentX: 445, y: 515 },  // DOWN 72pt from 587
-    { passX: 283, failX: 413, commentX: 445, y: 498 },  // DOWN 72pt from 570
-    { passX: 283, failX: 413, commentX: 445, y: 481 },  // DOWN 72pt from 553
-    { passX: 283, failX: 413, commentX: 445, y: 464 },  // DOWN 72pt from 536
-    { passX: 283, failX: 413, commentX: 445, y: 447 },  // DOWN 72pt from 519
-    { passX: 283, failX: 413, commentX: 445, y: 430 },  // DOWN 72pt from 502
-    { passX: 283, failX: 413, commentX: 445, y: 413 },  // DOWN 72pt from 485
-    { passX: 283, failX: 413, commentX: 445, y: 396 },  // DOWN 72pt from 468
-    { passX: 283, failX: 413, commentX: 445, y: 379 },  // DOWN 72pt from 451
-    { passX: 283, failX: 413, commentX: 445, y: 362 },  // DOWN 72pt from 434
-    { passX: 283, failX: 413, commentX: 445, y: 345 },  // DOWN 72pt from 417
-    { passX: 283, failX: 413, commentX: 445, y: 328 },  // DOWN 72pt from 400
-    { passX: 283, failX: 413, commentX: 445, y: 311 },  // DOWN 72pt from 383
-    { passX: 283, failX: 413, commentX: 445, y: 294 },  // DOWN 72pt from 366
-    { passX: 283, failX: 413, commentX: 445, y: 277 },  // DOWN 72pt from 349
+    { passX: 274, failX: 404, commentX: 445, y: 603 },  // 621-18=603, 265+9=274, 395+9=404
+    { passX: 274, failX: 404, commentX: 445, y: 586 },  // 604-18=586
+    { passX: 274, failX: 404, commentX: 445, y: 569 },  // 587-18=569
+    { passX: 274, failX: 404, commentX: 445, y: 552 },  // 570-18=552
+    { passX: 274, failX: 404, commentX: 445, y: 535 },  // 553-18=535
+    { passX: 274, failX: 404, commentX: 445, y: 518 },  // 536-18=518
+    { passX: 274, failX: 404, commentX: 445, y: 501 },  // 519-18=501
+    { passX: 274, failX: 404, commentX: 445, y: 484 },  // 502-18=484
+    { passX: 274, failX: 404, commentX: 445, y: 467 },  // 485-18=467
+    { passX: 274, failX: 404, commentX: 445, y: 450 },  // 468-18=450
+    { passX: 274, failX: 404, commentX: 445, y: 433 },  // 451-18=433
+    { passX: 274, failX: 404, commentX: 445, y: 416 },  // 434-18=416
+    { passX: 274, failX: 404, commentX: 445, y: 399 },  // 417-18=399
+    { passX: 274, failX: 404, commentX: 445, y: 382 },  // 400-18=382
+    { passX: 274, failX: 404, commentX: 445, y: 365 },  // 383-18=365
+    { passX: 274, failX: 404, commentX: 445, y: 331 },  // 349-18=331
   ],
 
   // Additional Comments section (starts below "Additional Comments:" label)
