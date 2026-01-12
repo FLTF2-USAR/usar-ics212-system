@@ -48,7 +48,7 @@ interface R2ObjectBody {
  * ADJUSTED V2: Critical alignment fixes based on user analysis
  */
 const FIELD_COORDS = {
-  // Top section - Row 1 (data goes in boxes below "Incident Name" and "Order No." labels)
+  // Header section - Perfect
   incidentName: { x: 60, y: 696 },
   orderNo: { x: 455, y: 696 },
   
@@ -57,35 +57,30 @@ const FIELD_COORDS = {
   agency: { x: 285, y: 674 },
   regUnit: { x: 455, y: 674 },
   
-  // Top section - Row 3 - ITERATION 4: Header fields DOWN 2pt
+  // ITERATION 5: Odometer and Vehicle ID DOWN 0.5" (36pt)
   vehicleType: { x: 60, y: 652 },
-  odometerReading: { x: 335, y: 655 },  // DOWN 2pt from 657
-  vehicleIdNo: { x: 480, y: 650 },      // DOWN 2pt from 652
+  odometerReading: { x: 335, y: 619 },  // DOWN 36pt from 655
+  vehicleIdNo: { x: 480, y: 614 },      // DOWN 36pt from 650
   
-  // ITERATION 3 ADJUSTMENTS:
-  // - Vehicle ID: was 440, now 440 + 40 = 480 (RIGHT)
-  // - Odometer: was 285, now 285 + 50 = 335 (RIGHT)
-  // ITERATION 4: Both shifted DOWN 2pt
-  
-  // ITERATION 3: Pass checkboxes shifted LEFT 35pt (was 300, now 265)
+  // ITERATION 5: ALL checkboxes DOWN 1" (72pt) + RIGHT 0.25" (18pt)
   inspectionItems: [
-    { passX: 265, failX: 395, commentX: 445, y: 621 },  // 1. Seat belts
-    { passX: 265, failX: 395, commentX: 445, y: 604 },  // 2. Windshield/windows
-    { passX: 265, failX: 395, commentX: 445, y: 587 },  // 3. Mirrors
-    { passX: 265, failX: 395, commentX: 445, y: 570 },  // 4. Horn
-    { passX: 265, failX: 395, commentX: 445, y: 553 },  // 5. Lights
-    { passX: 265, failX: 395, commentX: 445, y: 536 },  // 6. Turn signals
-    { passX: 265, failX: 395, commentX: 445, y: 519 },  // 7. Tires
-    { passX: 265, failX: 395, commentX: 445, y: 502 },  // 8. Wheel lug nuts
-    { passX: 265, failX: 395, commentX: 445, y: 485 },  // 9. Brakes (service and parking)
-    { passX: 265, failX: 395, commentX: 445, y: 468 },  // 10. Fluid levels
-    { passX: 265, failX: 395, commentX: 445, y: 451 },  // 11. Leaks
-    { passX: 265, failX: 395, commentX: 445, y: 434 },  // 12. Loose parts
-    { passX: 265, failX: 395, commentX: 445, y: 417 },  // 13. Fire extinguisher(s)
-    { passX: 265, failX: 395, commentX: 445, y: 400 },  // 14. First aid kit
-    { passX: 265, failX: 395, commentX: 445, y: 383 },  // 15. Accident prevention
-    { passX: 265, failX: 395, commentX: 445, y: 366 },  // 16. Spill kit
-    { passX: 265, failX: 395, commentX: 445, y: 349 },  // 17. Radio communications
+    { passX: 283, failX: 413, commentX: 445, y: 549 },  // DOWN 72pt from 621, RIGHT 18pt (265→283, 395→413)
+    { passX: 283, failX: 413, commentX: 445, y: 532 },  // DOWN 72pt from 604
+    { passX: 283, failX: 413, commentX: 445, y: 515 },  // DOWN 72pt from 587
+    { passX: 283, failX: 413, commentX: 445, y: 498 },  // DOWN 72pt from 570
+    { passX: 283, failX: 413, commentX: 445, y: 481 },  // DOWN 72pt from 553
+    { passX: 283, failX: 413, commentX: 445, y: 464 },  // DOWN 72pt from 536
+    { passX: 283, failX: 413, commentX: 445, y: 447 },  // DOWN 72pt from 519
+    { passX: 283, failX: 413, commentX: 445, y: 430 },  // DOWN 72pt from 502
+    { passX: 283, failX: 413, commentX: 445, y: 413 },  // DOWN 72pt from 485
+    { passX: 283, failX: 413, commentX: 445, y: 396 },  // DOWN 72pt from 468
+    { passX: 283, failX: 413, commentX: 445, y: 379 },  // DOWN 72pt from 451
+    { passX: 283, failX: 413, commentX: 445, y: 362 },  // DOWN 72pt from 434
+    { passX: 283, failX: 413, commentX: 445, y: 345 },  // DOWN 72pt from 417
+    { passX: 283, failX: 413, commentX: 445, y: 328 },  // DOWN 72pt from 400
+    { passX: 283, failX: 413, commentX: 445, y: 311 },  // DOWN 72pt from 383
+    { passX: 283, failX: 413, commentX: 445, y: 294 },  // DOWN 72pt from 366
+    { passX: 283, failX: 413, commentX: 445, y: 277 },  // DOWN 72pt from 349
   ],
 
   // Additional Comments section (starts below "Additional Comments:" label)
