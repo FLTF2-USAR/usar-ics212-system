@@ -18,13 +18,18 @@ const FONTS = {
   data: 10,       // User data fields
   small: 8,       // Secondary text
   checkbox: 8,    // Checkbox marks
+  debug: 6,       // Debug labels
 };
 
 // Colors
 const COLORS = {
   black: rgb(0, 0, 0),
   blue: rgb(0, 0, 0.8),
+  debugRed: rgb(1, 0, 0),
 };
+
+// Debug mode - set to true to show coordinate boxes
+const DEBUG_MODE = false;
 
 /**
  * R2 Bucket Interface
@@ -40,64 +45,62 @@ interface R2ObjectBody {
 /**
  * PDF Coordinate Mapping - Precise positions aligned to official form template
  * Y-coordinates are measured from BOTTOM of page, X from LEFT
- * ADJUSTED: Data fields positioned BELOW labels to sit inside form boxes
+ * ADJUSTED V2: Critical alignment fixes based on user analysis
  */
 const FIELD_COORDS = {
   // Top section - Row 1 (data goes in boxes below "Incident Name" and "Order No." labels)
-  incidentName: { x: 60, y: 696 },   // Adjusted down from 710
-  orderNo: { x: 455, y: 696 },       // Adjusted down from 710
+  incidentName: { x: 60, y: 696 },
+  orderNo: { x: 455, y: 696 },
   
   // Top section - Row 2 (below "Vehicle License No." and "Agency Reg/Unit" labels)
-  vehicleLicenseNo: { x: 60, y: 674 },  // Adjusted down from 688
-  agency: { x: 285, y: 674 },           // Adjusted down from 688
-  regUnit: { x: 455, y: 674 },          // Adjusted down from 688
+  vehicleLicenseNo: { x: 60, y: 674 },
+  agency: { x: 285, y: 674 },
+  regUnit: { x: 455, y: 674 },
   
-  // Top section - Row 3 (below "Type", "Odometer Reading", "Veh. ID No." labels)
-  vehicleType: { x: 60, y: 652 },        // Adjusted down from 666
-  odometerReading: { x: 285, y: 652 },   // Adjusted down from 666
-  vehicleIdNo: { x: 455, y: 652 },       // Adjusted down from 666
+  // Top section - Row 3 - ADJUSTED: Vehicle ID shifted LEFT 15pt, Odometer shifted UP 5pt
+  vehicleType: { x: 60, y: 652 },
+  odometerReading: { x: 285, y: 657 }, // UP 5pt from 652
+  vehicleIdNo: { x: 440, y: 652 },      // LEFT 15pt from 455
   
-  // Inspection items - Pass/Fail checkboxes (17 items)
-  // Each item has: passX, failX, commentX, and y coordinate
-  // Adjusted to align checkbox 'X' marks within checkbox boxes
+  // Inspection items - ADJUSTED: Pass checkboxes shifted LEFT 45pt (345 → 300)
   inspectionItems: [
-    { passX: 345, failX: 395, commentX: 445, y: 621 },  // 1. Gauges and lights
-    { passX: 345, failX: 395, commentX: 445, y: 605 },  // 2. Seat belts
-    { passX: 345, failX: 395, commentX: 445, y: 589 },  // 3. Glass and mirrors
-    { passX: 345, failX: 395, commentX: 445, y: 573 },  // 4. Wipers and horn
-    { passX: 345, failX: 395, commentX: 445, y: 557 },  // 5. Engine compartment
-    { passX: 345, failX: 395, commentX: 445, y: 541 },  // 6. Fuel System
-    { passX: 345, failX: 395, commentX: 445, y: 525 },  // 7. Steering
-    { passX: 345, failX: 395, commentX: 445, y: 509 },  // 8. Brakes
-    { passX: 345, failX: 395, commentX: 445, y: 493 },  // 9. Drive line U-joints
-    { passX: 345, failX: 395, commentX: 445, y: 477 },  // 10. Springs and shocks
-    { passX: 345, failX: 395, commentX: 445, y: 461 },  // 11. Exhaust system
-    { passX: 345, failX: 395, commentX: 445, y: 445 },  // 12. Frame
-    { passX: 345, failX: 395, commentX: 445, y: 429 },  // 13. Tire and wheels
-    { passX: 345, failX: 395, commentX: 445, y: 413 },  // 14. Coupling devices / Emergency exit
-    { passX: 345, failX: 395, commentX: 445, y: 397 },  // 15. Pump operation
-    { passX: 345, failX: 395, commentX: 445, y: 381 },  // 16. Damage on incident
-    { passX: 345, failX: 395, commentX: 445, y: 365 },  // 17. Other
+    { passX: 300, failX: 395, commentX: 445, y: 621 },  // 1. Gauges and lights
+    { passX: 300, failX: 395, commentX: 445, y: 605 },  // 2. Seat belts
+    { passX: 300, failX: 395, commentX: 445, y: 589 },  // 3. Glass and mirrors
+    { passX: 300, failX: 395, commentX: 445, y: 573 },  // 4. Wipers and horn
+    { passX: 300, failX: 395, commentX: 445, y: 557 },  // 5. Engine compartment
+    { passX: 300, failX: 395, commentX: 445, y: 541 },  // 6. Fuel System
+    { passX: 300, failX: 395, commentX: 445, y: 525 },  // 7. Steering
+    { passX: 300, failX: 395, commentX: 445, y: 509 },  // 8. Brakes
+    { passX: 300, failX: 395, commentX: 445, y: 493 },  // 9. Drive line U-joints
+    { passX: 300, failX: 395, commentX: 445, y: 477 },  // 10. Springs and shocks
+    { passX: 300, failX: 395, commentX: 445, y: 461 },  // 11. Exhaust system
+    { passX: 300, failX: 395, commentX: 445, y: 445 },  // 12. Frame
+    { passX: 300, failX: 395, commentX: 445, y: 429 },  // 13. Tire and wheels
+    { passX: 300, failX: 395, commentX: 445, y: 413 },  // 14. Coupling devices / Emergency exit
+    { passX: 300, failX: 395, commentX: 445, y: 397 },  // 15. Pump operation
+    { passX: 300, failX: 395, commentX: 445, y: 381 },  // 16. Damage on incident
+    { passX: 300, failX: 395, commentX: 445, y: 365 },  // 17. Other
   ],
 
   // Additional Comments section (starts below "Additional Comments:" label)
   additionalComments: { x: 60, y: 328, maxWidth: 500, lineHeight: 12 },
 
-  // Bottom decision boxes - Adjusted for proper alignment within form boxes
+  // Bottom decision boxes - ADJUSTED: All Y coordinates shifted UP by 20pts
   holdForRepairs: {
-    checkbox: { x: 60, y: 237 },          // Adjusted for checkbox alignment
-    date: { x: 95, y: 218 },              // Date field below checkbox
-    time: { x: 185, y: 218 },             // Time field 
-    inspectorName: { x: 95, y: 198 },     // Name (Print) field
-    inspectorSignature: { x: 95, y: 168, width: 150, height: 25 },  // Signature box
+    checkbox: { x: 60, y: 257 },          // UP 20pt from 237
+    date: { x: 95, y: 238 },              // UP 20pt from 218
+    time: { x: 185, y: 238 },             // UP 20pt from 218
+    inspectorName: { x: 95, y: 218 },     // UP 20pt from 198
+    inspectorSignature: { x: 95, y: 188, width: 150, height: 25 },  // UP 20pt from 168
   },
 
   release: {
-    checkbox: { x: 345, y: 237 },         // Adjusted for checkbox alignment
-    date: { x: 380, y: 218 },             // Date field below checkbox
-    time: { x: 470, y: 218 },             // Time field
-    operatorName: { x: 380, y: 198 },     // Name (Print) field
-    operatorSignature: { x: 380, y: 168, width: 150, height: 25 },  // Signature box
+    checkbox: { x: 345, y: 257 },         // UP 20pt from 237
+    date: { x: 380, y: 238 },             // UP 20pt from 218
+    time: { x: 470, y: 238 },             // UP 20pt from 218
+    operatorName: { x: 380, y: 218 },     // UP 20pt from 198
+    operatorSignature: { x: 380, y: 188, width: 150, height: 25 },  // UP 20pt from 168
   },
 };
 
@@ -176,6 +179,38 @@ export async function generateICS212PDF(
 }
 
 /**
+ * Debug helper: Draw a red bounding box around target coordinates
+ */
+function drawDebugBox(
+  page: any,
+  x: number,
+  y: number,
+  width: number = 50,
+  height: number = 10,
+  label?: string
+): void {
+  if (!DEBUG_MODE) return;
+  
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    borderColor: COLORS.debugRed,
+    borderWidth: 1,
+  });
+  
+  if (label) {
+    page.drawText(label, {
+      x: x + 2,
+      y: y - 8,
+      size: FONTS.debug,
+      color: COLORS.debugRed,
+    });
+  }
+}
+
+/**
  * Overlay all form data onto the template PDF at precise coordinates
  */
 async function overlayFormData(
@@ -196,8 +231,10 @@ async function overlayFormData(
   overlayTextField(page, normalFont, FIELD_COORDS.regUnit, agencyParts[1]);
   
   overlayTextField(page, normalFont, FIELD_COORDS.vehicleType, formData.vehicleType);
-  overlayTextField(page, normalFont, FIELD_COORDS.odometerReading, formData.odometerReading?.toString());
-  overlayTextField(page, normalFont, FIELD_COORDS.vehicleIdNo, formData.vehicleIdNo);
+  
+  // Odometer & Vehicle ID - Use smaller font (8pt instead of 10pt)
+  overlayTextFieldSmall(page, normalFont, FIELD_COORDS.odometerReading, formData.odometerReading?.toString());
+  overlayTextFieldSmall(page, normalFont, FIELD_COORDS.vehicleIdNo, formData.vehicleIdNo);
   
   // Inspection items - checkboxes and comments
   overlayInspectionItems(page, normalFont, boldFont, formData.inspectionItems);
@@ -220,10 +257,34 @@ function overlayTextField(
 ): void {
   if (!value) return;
   
+  drawDebugBox(page, coords.x, coords.y, 100, 12, 'field');
+  
   page.drawText(value, {
     x: coords.x,
     y: coords.y,
     size: FONTS.data,
+    font: font,
+    color: COLORS.black,
+  });
+}
+
+/**
+ * Overlay a text field with smaller font (for header Vehicle ID & Odometer)
+ */
+function overlayTextFieldSmall(
+  page: any,
+  font: any,
+  coords: { x: number; y: number },
+  value: string | undefined
+): void {
+  if (!value) return;
+  
+  drawDebugBox(page, coords.x, coords.y, 80, 10, 'small');
+  
+  page.drawText(value, {
+    x: coords.x,
+    y: coords.y,
+    size: FONTS.small,  // 8pt font
     font: font,
     color: COLORS.black,
   });
@@ -246,6 +307,8 @@ function overlayInspectionItems(
     
     // Draw Pass checkbox 'X'
     if (item.status === 'pass') {
+      drawDebugBox(page, coords.passX, coords.y, 10, 10, 'P');
+      
       page.drawText('X', {
         x: coords.passX,
         y: coords.y,
@@ -257,6 +320,8 @@ function overlayInspectionItems(
     
     // Draw Fail checkbox 'X'
     if (item.status === 'fail') {
+      drawDebugBox(page, coords.failX, coords.y, 10, 10, 'F');
+      
       page.drawText('X', {
         x: coords.failX,
         y: coords.y,
