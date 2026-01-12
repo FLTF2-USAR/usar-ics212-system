@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Save, Trash2, Home } from 'lucide-react';
+import { Save, Trash2, ArrowLeft, LayoutDashboard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProgressIndicator from '../mobile/ProgressIndicator';
 import IncidentInfoStep from './IncidentInfoStep';
@@ -237,8 +237,30 @@ export const ICS218Form: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Navigation Header */}
+      <div className="bg-gradient-to-r from-orange-600 to-orange-700 border-b border-orange-800 sticky top-0 z-50 shadow-lg">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back to Form Hub</span>
+            </button>
+            <button
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-2 text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-colors"
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="font-medium">Admin Dashboard</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-[52px] z-40 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3 flex-1">
@@ -257,14 +279,6 @@ export const ICS218Form: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                title="Home"
-              >
-                <Home className="w-5 h-5" />
-              </button>
               <button
                 type="button"
                 onClick={handleManualSave}

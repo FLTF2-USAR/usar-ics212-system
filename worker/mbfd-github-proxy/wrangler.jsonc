@@ -39,6 +39,14 @@
 		}
 	],
 	
+	// R2 storage for PDFs
+	"r2_buckets": [
+		{
+			"binding": "USAR_FORMS",
+			"bucket_name": "usar-forms"
+		}
+	],
+	
 	"ai": {
 		"binding": "AI"
 	},
