@@ -57,14 +57,15 @@ const FIELD_COORDS = {
   agency: { x: 285, y: 674 },
   regUnit: { x: 455, y: 674 },
   
-  // Top section - Row 3 - ADJUSTED: Vehicle ID shifted LEFT 15pt, Odometer shifted UP 5pt
+  // Top section - Row 3 - ITERATION 4: Header fields DOWN 2pt
   vehicleType: { x: 60, y: 652 },
-  odometerReading: { x: 335, y: 657 },  // RIGHT +50pt from 285
-  vehicleIdNo: { x: 480, y: 652 },      // RIGHT +40pt from 440
+  odometerReading: { x: 335, y: 655 },  // DOWN 2pt from 657
+  vehicleIdNo: { x: 480, y: 650 },      // DOWN 2pt from 652
   
   // ITERATION 3 ADJUSTMENTS:
   // - Vehicle ID: was 440, now 440 + 40 = 480 (RIGHT)
   // - Odometer: was 285, now 285 + 50 = 335 (RIGHT)
+  // ITERATION 4: Both shifted DOWN 2pt
   
   // ITERATION 3: Pass checkboxes shifted LEFT 35pt (was 300, now 265)
   inspectionItems: [
@@ -90,22 +91,22 @@ const FIELD_COORDS = {
   // Additional Comments section (starts below "Additional Comments:" label)
   additionalComments: { x: 60, y: 328, maxWidth: 500, lineHeight: 12 },
 
-  // ITERATION 3: Footer shifted UP 25pt (y-coordinates increased by 25)
+  // ITERATION 4: Footer shifted DOWN 10pt (y-coordinates decreased by 10)
   // Footer dates shifted LEFT 50pt (x-coordinates decreased by 50)
   holdForRepairs: {
-    checkbox: { x: 60, y: 282 },     // UP 25pt from 257
-    date: { x: 45, y: 263 },         // UP 25pt from 238, LEFT 50pt from 95
-    time: { x: 120, y: 263 },        // Time field next to date
-    inspectorName: { x: 95, y: 243 }, // UP 25pt from 218
-    inspectorSignature: { x: 95, y: 213, width: 150, height: 25 },  // UP 25pt from 188
+    checkbox: { x: 60, y: 272 },     // DOWN 10pt from 282
+    date: { x: 45, y: 253 },         // DOWN 10pt from 263
+    time: { x: 120, y: 253 },        // DOWN 10pt from 263
+    inspectorName: { x: 95, y: 233 }, // DOWN 10pt from 243
+    inspectorSignature: { x: 95, y: 203, width: 150, height: 25 },  // DOWN 10pt from 213
   },
 
   releaseForUse: {
-    checkbox: { x: 305, y: 282 },    // UP 25pt from 257
-    date: { x: 290, y: 263 },        // UP 25pt from 238, LEFT 50pt from 340
-    time: { x: 365, y: 263 },        // Time field next to date
-    operatorName: { x: 340, y: 243 },// UP 25pt from 218
-    operatorSignature: { x: 340, y: 213, width: 150, height: 25 },  // UP 25pt from 188
+    checkbox: { x: 305, y: 272 },    // DOWN 10pt from 282
+    date: { x: 290, y: 253 },        // DOWN 10pt from 263
+    time: { x: 365, y: 253 },        // DOWN 10pt from 263
+    operatorName: { x: 340, y: 233 },// DOWN 10pt from 243
+    operatorSignature: { x: 340, y: 203, width: 150, height: 25 },  // DOWN 10pt from 213
   },
 };
 
@@ -262,7 +263,7 @@ function overlayTextField(
 ): void {
   if (!value) return;
   
-  drawDebugBox(page, coords.x, coords.y, 100, 12, 'field');
+  drawDebugBox(page, coords.x, coords.y, 100, 12);
   
   page.drawText(value, {
     x: coords.x,
@@ -284,7 +285,7 @@ function overlayTextFieldSmall(
 ): void {
   if (!value) return;
   
-  drawDebugBox(page, coords.x, coords.y, 80, 10, 'small');
+  drawDebugBox(page, coords.x, coords.y, 80, 10);
   
   page.drawText(value, {
     x: coords.x,
@@ -312,7 +313,7 @@ function overlayInspectionItems(
     
     // Draw Pass checkbox 'X'
     if (item.status === 'pass') {
-      drawDebugBox(page, coords.passX, coords.y, 10, 10, 'P');
+      drawDebugBox(page, coords.passX, coords.y, 10, 10);
       
       page.drawText('X', {
         x: coords.passX,
@@ -325,7 +326,7 @@ function overlayInspectionItems(
     
     // Draw Fail checkbox 'X'
     if (item.status === 'fail') {
-      drawDebugBox(page, coords.failX, coords.y, 10, 10, 'F');
+      drawDebugBox(page, coords.failX, coords.y, 10, 10);
       
       page.drawText('X', {
         x: coords.failX,
