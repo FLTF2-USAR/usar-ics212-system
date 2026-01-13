@@ -3,8 +3,6 @@ import { Save, RotateCcw, Move, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Rnd } from 'react-rnd';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { showToast } from '../mobile/Toast';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 // Configure pdf.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -54,6 +52,7 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
+
 
   const fetchFieldConfigs = async () => {
     try {
