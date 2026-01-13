@@ -26,10 +26,13 @@ const COLORS = {
   black: rgb(0, 0, 0),
   blue: rgb(0, 0, 0.8),
   debugRed: rgb(1, 0, 0),
+  gridGray: rgb(0.8, 0.8, 0.8),
+  gridLabelGray: rgb(0.5, 0.5, 0.5),
 };
 
-// Debug mode - set to true to show coordinate boxes
+// Debug mode - set to true to show coordinate boxes and grid
 const DEBUG_MODE = true;  // ENABLED for alignment verification
+const GRID_MODE = true;   // ENABLED to show coordinate grid
 
 /**
  * R2 Bucket Interface
@@ -43,12 +46,67 @@ interface R2ObjectBody {
 }
 
 /**
+ * Draw a coordinate grid overlay for precise alignment debugging
+ * Grid lines every 50 points with labeled coordinates
+ */
+function drawCoordinateGrid(page: any, width: number, height: number): void {
+  if (!GRID_MODE) return;
+  
+  const normalFont = page.doc.embedStandardFont ? StandardFonts.Helvetica : null;
+  
+  // Draw vertical lines every 50 points
+  for (let x = 0; x < width; x += 50) {
+    page.drawLine({
+      start: { x, y: 0 },
+      end: { x, y: height },
+      color: COLORS.gridGray,
+      thickness: 0.5,
+    });
+    
+    // Label at bottom
+    page.drawText(`${x}`, {
+      x: x + 2,
+      y: 10,
+      size: 6,
+      color: COLORS.gridLabelGray,
+    });
+  }
+  
+  // Draw horizontal lines every 50 points
+  for (let y = 0; y < height; y += 50) {
+    page.drawLine({
+      start: { x: 0, y },
+      end: { x: width, y },
+      color: COLORS.gridGray,
+      thickness: 0.5,
+    });
+    
+    // Label at left
+    page.drawText(`${y}`, {
+      x: 5,
+      y: y + 2,
+      size: 6,
+      color: COLORS.gridLabelGray,
+    });
+  }
+}
+
+/**
  * PDF Coordinate Mapping - Precise positions aligned to official form template
- * Y-coordinates are measured from BOTTOM of page, X from LEFT
- * ADJUSTED V2: Critical alignment fixes based on user analysis
+ * Y-coordinates are measured from BOTTOM of page (PDF standard), X from LEFT
+ * To move DOWN: DECREASE Y value
+ * To move UP: INCREASE Y value
+ * To move RIGHT: INCREASE X value
+ * To move LEFT: DECREASE X value
+ * 
+ * ITERATION 7: GRID-GUIDED CORRECTIONS
+ * - Reset to Iteration 4 baseline
+ * - Vehicle ID & Odometer: DOWN 12pt (DECREASE Y)
+ * - Checkboxes: DOWN 4pt (DECREASE Y)
+ * - Footer sections: DOWN 35pt (DECREASE Y)
  */
 const FIELD_COORDS = {
-  // Header section - Perfect
+  // Header section - Perfect (no changes)
   incidentName: { x: 60, y: 696 },
   orderNo: { x: 455, y: 696 },
   
@@ -57,50 +115,50 @@ const FIELD_COORDS = {
   agency: { x: 285, y: 674 },
   regUnit: { x: 455, y: 674 },
   
-  // ITERATION 6: Reset to Iteration 4 baseline (655/650), then DOWN 1/8" (9pt)
+  // ITERATION 7: Vehicle header fields - Iteration 4 baseline (655/650) - 12pt = 643/638
   vehicleType: { x: 60, y: 652 },
-  odometerReading: { x: 335, y: 646 },  // 655 - 9 = 646
-  vehicleIdNo: { x: 480, y: 641 },      // 650 - 9 = 641
+  odometerReading: { x: 335, y: 643 },  // 655 - 12 = 643
+  vehicleIdNo: { x: 480, y: 638 },      // 650 - 12 = 638
   
-  // ITERATION 6: Reset to Iteration 4 baseline (265/395), then DOWN 0.25" (18pt) + RIGHT 1/8" (9pt)
+  // ITERATION 7: Checkboxes - Iteration 4 baseline (265/395/621) - 4pt Y = 617
   inspectionItems: [
-    { passX: 274, failX: 404, commentX: 445, y: 603 },  // 621-18=603, 265+9=274, 395+9=404
-    { passX: 274, failX: 404, commentX: 445, y: 586 },  // 604-18=586
-    { passX: 274, failX: 404, commentX: 445, y: 569 },  // 587-18=569
-    { passX: 274, failX: 404, commentX: 445, y: 552 },  // 570-18=552
-    { passX: 274, failX: 404, commentX: 445, y: 535 },  // 553-18=535
-    { passX: 274, failX: 404, commentX: 445, y: 518 },  // 536-18=518
-    { passX: 274, failX: 404, commentX: 445, y: 501 },  // 519-18=501
-    { passX: 274, failX: 404, commentX: 445, y: 484 },  // 502-18=484
-    { passX: 274, failX: 404, commentX: 445, y: 467 },  // 485-18=467
-    { passX: 274, failX: 404, commentX: 445, y: 450 },  // 468-18=450
-    { passX: 274, failX: 404, commentX: 445, y: 433 },  // 451-18=433
-    { passX: 274, failX: 404, commentX: 445, y: 416 },  // 434-18=416
-    { passX: 274, failX: 404, commentX: 445, y: 399 },  // 417-18=399
-    { passX: 274, failX: 404, commentX: 445, y: 382 },  // 400-18=382
-    { passX: 274, failX: 404, commentX: 445, y: 365 },  // 383-18=365
-    { passX: 274, failX: 404, commentX: 445, y: 331 },  // 349-18=331
+    { passX: 265, failX: 395, commentX: 445, y: 617 },  // 621 - 4 = 617
+    { passX: 265, failX: 395, commentX: 445, y: 600 },  // 604 - 4 = 600
+    { passX: 265, failX: 395, commentX: 445, y: 583 },  // 587 - 4 = 583
+    { passX: 265, failX: 395, commentX: 445, y: 566 },  // 570 - 4 = 566
+    { passX: 265, failX: 395, commentX: 445, y: 549 },  // 553 - 4 = 549
+    { passX: 265, failX: 395, commentX: 445, y: 532 },  // 536 - 4 = 532
+    { passX: 265, failX: 395, commentX: 445, y: 515 },  // 519 - 4 = 515
+    { passX: 265, failX: 395, commentX: 445, y: 498 },  // 502 - 4 = 498
+    { passX: 265, failX: 395, commentX: 445, y: 481 },  // 485 - 4 = 481
+    { passX: 265, failX: 395, commentX: 445, y: 464 },  // 468 - 4 = 464
+    { passX: 265, failX: 395, commentX: 445, y: 447 },  // 451 - 4 = 447
+    { passX: 265, failX: 395, commentX: 445, y: 430 },  // 434 - 4 = 430
+    { passX: 265, failX: 395, commentX: 445, y: 413 },  // 417 - 4 = 413
+    { passX: 265, failX: 395, commentX: 445, y: 396 },  // 400 - 4 = 396
+    { passX: 265, failX: 395, commentX: 445, y: 379 },  // 383 - 4 = 379
+    { passX: 265, failX: 395, commentX: 445, y: 362 },  // 366 - 4 = 362
+    { passX: 265, failX: 395, commentX: 445, y: 345 },  // 349 - 4 = 345
   ],
 
   // Additional Comments section (starts below "Additional Comments:" label)
   additionalComments: { x: 60, y: 328, maxWidth: 500, lineHeight: 12 },
 
-  // ITERATION 4: Footer shifted DOWN 10pt (y-coordinates decreased by 10)
-  // Footer dates shifted LEFT 50pt (x-coordinates decreased by 50)
+  // ITERATION 7: Footer shifted DOWN 35pt from Iteration 4 (272/253/233/203)
   holdForRepairs: {
-    checkbox: { x: 60, y: 272 },     // DOWN 10pt from 282
-    date: { x: 45, y: 253 },         // DOWN 10pt from 263
-    time: { x: 120, y: 253 },        // DOWN 10pt from 263
-    inspectorName: { x: 95, y: 233 }, // DOWN 10pt from 243
-    inspectorSignature: { x: 95, y: 203, width: 150, height: 25 },  // DOWN 10pt from 213
+    checkbox: { x: 60, y: 237 },     // 272 - 35 = 237
+    date: { x: 45, y: 218 },         // 253 - 35 = 218
+    time: { x: 120, y: 218 },        // 253 - 35 = 218
+    inspectorName: { x: 95, y: 198 }, // 233 - 35 = 198
+    inspectorSignature: { x: 95, y: 168, width: 150, height: 25 },  // 203 - 35 = 168
   },
 
   releaseForUse: {
-    checkbox: { x: 305, y: 272 },    // DOWN 10pt from 282
-    date: { x: 290, y: 253 },        // DOWN 10pt from 263
-    time: { x: 365, y: 253 },        // DOWN 10pt from 263
-    operatorName: { x: 340, y: 233 },// DOWN 10pt from 243
-    operatorSignature: { x: 340, y: 203, width: 150, height: 25 },  // DOWN 10pt from 213
+    checkbox: { x: 305, y: 237 },    // 272 - 35 = 237
+    date: { x: 290, y: 218 },        // 253 - 35 = 218
+    time: { x: 365, y: 218 },        // 253 - 35 = 218
+    operatorName: { x: 340, y: 198 },// 233 - 35 = 198
+    operatorSignature: { x: 340, y: 168, width: 150, height: 25 },  // 203 - 35 = 168
   },
 };
 
@@ -220,6 +278,10 @@ async function overlayFormData(
   formData: ICS212FormData,
   pdfDoc: any
 ): Promise<void> {
+  // Draw coordinate grid first (if enabled)
+  const { width, height } = page.getSize();
+  drawCoordinateGrid(page, width, height);
+  
   // Top section fields
   overlayTextField(page, normalFont, FIELD_COORDS.incidentName, formData.incidentName);
   overlayTextField(page, normalFont, FIELD_COORDS.orderNo, formData.orderNo);
