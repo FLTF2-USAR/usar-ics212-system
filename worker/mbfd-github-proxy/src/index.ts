@@ -142,18 +142,22 @@ const CACHE_TTL = {
  * Helper to get CORS headers with proper origin
  */
 function getCorsHeaders(origin: string | null): Record<string, string> {
-  // Check if origin is allowed (including wildcard for .pages.dev deployments)
-  const allowedOrigin = origin && (
-    ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed)) ||
-    origin.match(/^https:\/\/[a-z0-9]+\.usar-ics212\.pages\.dev$/)
-  )
-    ? origin
-    : ALLOWED_ORIGINS[0]; // Default to first allowed origin
+  // ALLOWED DOMAINS: Localhost, GitHub Pages, and ANY Cloudflare Pages deployment
+  const isAllowed = 
+    origin && (
+      origin.includes('localhost') || 
+      origin.endsWith('.github.io') || 
+      origin.endsWith('.pages.dev')
+    );
+
+  // If allowed, echo back the origin. If not, default to production or null.
+  const allowOrigin = isAllowed ? origin : 'https://production.usar-ics212.pages.dev';
 
   return {
-    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password, X-Requested-With',
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
   };
 }
@@ -196,8 +200,9 @@ export default {
 
     // Origin check for security (allow requests only from our apps)
     if (origin && !(
-      ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed)) ||
-      origin.match(/^https:\/\/[a-z0-9]+\.usar-ics212\.pages\.dev$/)
+      origin.includes('localhost') || 
+      origin.endsWith('.github.io') || 
+      origin.endsWith('.pages.dev')
     )) {
       console.error('Forbidden: Invalid origin', origin);
       return jsonResponse(
@@ -336,7 +341,7 @@ export default {
 
     // Task update endpoint - extract ID from path
     const taskMatch = path.match(/^\/api\/tasks\/(.+)$/)
-    if (taskMatch && request.method === 'PATCH') {
+    if (taskMatch && request.method ===  'PATCH') {
       const taskId = taskMatch[1];
       // Make sure 'mark-viewed' doesn't match this regex
       if (taskId !== 'mark-viewed') {
@@ -436,7 +441,7 @@ export default {
 
     // NEW: ICS-212 PDF preview endpoint (inline display)
     if (path === '/api/ics212/pdf/preview' && request.method === 'GET') {
-      return await handlePDFPreview(request, env, corsHeaders);
+      return await handlePDFDownload(request, env, corsHeaders);
     }
 
     // NEW: ICS-212 Admin Dashboard API endpoints
@@ -541,6 +546,7 @@ async function handleIssuesRequest(
   url: URL
 ): Promise<Response> {
   const path = url.pathname.replace('/api/issues', '')
+  const origin = request.headers.get('Origin');
   
   try {
     // List issues - with caching for GET requests
@@ -552,7 +558,7 @@ async function handleIssuesRequest(
 
       if (response) {
         console.log('Cache HIT for issues list');
-        return addCorsHeaders(response);
+        return addCorsHeaders(response, origin);
       }
 
       console.log('Cache MISS for issues list');
@@ -602,7 +608,7 @@ async function handleIssuesRequest(
 
       if (response) {
         console.log(`Cache HIT for issue #${issueNumber}`);
-        return addCorsHeaders(response);
+        return addCorsHeaders(response, origin);
       }
 
       console.log(`Cache MISS for issue #${issueNumber}`);
@@ -834,9 +840,6 @@ async function invalidateIssuesCache(): Promise<void> {
 function jsonResponse(data: any, options: { status?: number; headers?: Record<string, string> } = {}): Response {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': ALLOWED_ORIGINS[0],
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
     ...options.headers,
   };
 
@@ -846,11 +849,13 @@ function jsonResponse(data: any, options: { status?: number; headers?: Record<st
   });
 }
 
-function addCorsHeaders(response: Response): Response {
+function addCorsHeaders(response: Response, origin: string | null = null): Response {
+  const corsHeaders = getCorsHeaders(origin);
   const newHeaders = new Headers(response.headers);
-  newHeaders.set('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
-  newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Password');
+  
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    newHeaders.set(key, value);
+  });
   
   return new Response(response.body, {
     status: response.status,
