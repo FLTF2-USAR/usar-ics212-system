@@ -99,11 +99,11 @@ function drawCoordinateGrid(page: any, width: number, height: number): void {
  * To move RIGHT: INCREASE X value
  * To move LEFT: DECREASE X value
  * 
- * ITERATION 7: GRID-GUIDED CORRECTIONS
- * - Reset to Iteration 4 baseline
- * - Vehicle ID & Odometer: DOWN 12pt (DECREASE Y)
- * - Checkboxes: DOWN 4pt (DECREASE Y)
- * - Footer sections: DOWN 35pt (DECREASE Y)
+ * ITERATION 8: ABSOLUTE GRID-VERIFIED COORDINATES
+ * All values set to EXACT positions based on grid overlay analysis
+ * Footer: Y=65-135 (was floating at Y=168-237)
+ * Header: Y=630-635 (avoiding Y=650 line collision)
+ * Checkboxes: Start Y=615, Pass X=255 (centered in column)
  */
 const FIELD_COORDS = {
   // Header section - Perfect (no changes)
@@ -115,50 +115,50 @@ const FIELD_COORDS = {
   agency: { x: 285, y: 674 },
   regUnit: { x: 455, y: 674 },
   
-  // ITERATION 7: Vehicle header fields - Iteration 4 baseline (655/650) - 12pt = 643/638
+  // ITERATION 8: Header fields - EXACT ABSOLUTE coordinates below Y=650 line
   vehicleType: { x: 60, y: 652 },
-  odometerReading: { x: 335, y: 643 },  // 655 - 12 = 643
-  vehicleIdNo: { x: 480, y: 638 },      // 650 - 12 = 638
+  odometerReading: { x: 335, y: 635 },  // ABSOLUTE: Clear of Y=650 line
+  vehicleIdNo: { x: 485, y: 630 },      // ABSOLUTE: X=485 clears label, Y=630 below line
   
-  // ITERATION 7: Checkboxes - Iteration 4 baseline (265/395/621) - 4pt Y = 617
+  // ITERATION 8: Checkboxes - EXACT ABSOLUTE coordinates, Pass centered at X=255
   inspectionItems: [
-    { passX: 265, failX: 395, commentX: 445, y: 617 },  // 621 - 4 = 617
-    { passX: 265, failX: 395, commentX: 445, y: 600 },  // 604 - 4 = 600
-    { passX: 265, failX: 395, commentX: 445, y: 583 },  // 587 - 4 = 583
-    { passX: 265, failX: 395, commentX: 445, y: 566 },  // 570 - 4 = 566
-    { passX: 265, failX: 395, commentX: 445, y: 549 },  // 553 - 4 = 549
-    { passX: 265, failX: 395, commentX: 445, y: 532 },  // 536 - 4 = 532
-    { passX: 265, failX: 395, commentX: 445, y: 515 },  // 519 - 4 = 515
-    { passX: 265, failX: 395, commentX: 445, y: 498 },  // 502 - 4 = 498
-    { passX: 265, failX: 395, commentX: 445, y: 481 },  // 485 - 4 = 481
-    { passX: 265, failX: 395, commentX: 445, y: 464 },  // 468 - 4 = 464
-    { passX: 265, failX: 395, commentX: 445, y: 447 },  // 451 - 4 = 447
-    { passX: 265, failX: 395, commentX: 445, y: 430 },  // 434 - 4 = 430
-    { passX: 265, failX: 395, commentX: 445, y: 413 },  // 417 - 4 = 413
-    { passX: 265, failX: 395, commentX: 445, y: 396 },  // 400 - 4 = 396
-    { passX: 265, failX: 395, commentX: 445, y: 379 },  // 383 - 4 = 379
-    { passX: 265, failX: 395, commentX: 445, y: 362 },  // 366 - 4 = 362
-    { passX: 265, failX: 395, commentX: 445, y: 345 },  // 349 - 4 = 345
+    { passX: 255, failX: 395, commentX: 445, y: 615 },  // ABSOLUTE START
+    { passX: 255, failX: 395, commentX: 445, y: 598 },  // 615 - 17 = 598
+    { passX: 255, failX: 395, commentX: 445, y: 581 },  // 598 - 17 = 581
+    { passX: 255, failX: 395, commentX: 445, y: 564 },  // 581 - 17 = 564
+    { passX: 255, failX: 395, commentX: 445, y: 547 },  // 564 - 17 = 547
+    { passX: 255, failX: 395, commentX: 445, y: 530 },  // 547 - 17 = 530
+    { passX: 255, failX: 395, commentX: 445, y: 513 },  // 530 - 17 = 513
+    { passX: 255, failX: 395, commentX: 445, y: 496 },  // 513 - 17 = 496
+    { passX: 255, failX: 395, commentX: 445, y: 479 },  // 496 - 17 = 479
+    { passX: 255, failX: 395, commentX: 445, y: 462 },  // 479 - 17 = 462
+    { passX: 255, failX: 395, commentX: 445, y: 445 },  // 462 - 17 = 445
+    { passX: 255, failX: 395, commentX: 445, y: 428 },  // 445 - 17 = 428
+    { passX: 255, failX: 395, commentX: 445, y: 411 },  // 428 - 17 = 411
+    { passX: 255, failX: 395, commentX: 445, y: 394 },  // 411 - 17 = 394
+    { passX: 255, failX: 395, commentX: 445, y: 377 },  // 394 - 17 = 377
+    { passX: 255, failX: 395, commentX: 445, y: 360 },  // 377 - 17 = 360
+    { passX: 255, failX: 395, commentX: 445, y: 343 },  // 360 - 17 = 343
   ],
 
   // Additional Comments section (starts below "Additional Comments:" label)
   additionalComments: { x: 60, y: 328, maxWidth: 500, lineHeight: 12 },
 
-  // ITERATION 7: Footer shifted DOWN 35pt from Iteration 4 (272/253/233/203)
+  // ITERATION 8: Footer - EXACT ABSOLUTE coordinates in Y=65-135 zone (signature block area)
   holdForRepairs: {
-    checkbox: { x: 60, y: 237 },     // 272 - 35 = 237
-    date: { x: 45, y: 218 },         // 253 - 35 = 218
-    time: { x: 120, y: 218 },        // 253 - 35 = 218
-    inspectorName: { x: 95, y: 198 }, // 233 - 35 = 198
-    inspectorSignature: { x: 95, y: 168, width: 150, height: 25 },  // 203 - 35 = 168
+    checkbox: { x: 60, y: 135 },     // ABSOLUTE: Top of signature block
+    date: { x: 45, y: 115 },         // ABSOLUTE: Date line
+    time: { x: 120, y: 115 },        // ABSOLUTE: Time line (same as date)
+    inspectorName: { x: 95, y: 95 }, // ABSOLUTE: Name line
+    inspectorSignature: { x: 95, y: 65, width: 150, height: 25 },  // ABSOLUTE: Signature box
   },
 
   releaseForUse: {
-    checkbox: { x: 305, y: 237 },    // 272 - 35 = 237
-    date: { x: 290, y: 218 },        // 253 - 35 = 218
-    time: { x: 365, y: 218 },        // 253 - 35 = 218
-    operatorName: { x: 340, y: 198 },// 233 - 35 = 198
-    operatorSignature: { x: 340, y: 168, width: 150, height: 25 },  // 203 - 35 = 168
+    checkbox: { x: 305, y: 135 },    // ABSOLUTE: Top of signature block
+    date: { x: 290, y: 115 },        // ABSOLUTE: Date line
+    time: { x: 365, y: 115 },        // ABSOLUTE: Time line (same as date)
+    operatorName: { x: 340, y: 95 }, // ABSOLUTE: Name line
+    operatorSignature: { x: 340, y: 65, width: 150, height: 25 },  // ABSOLUTE: Signature box
   },
 };
 
