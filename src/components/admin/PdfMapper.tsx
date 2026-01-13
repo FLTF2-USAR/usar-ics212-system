@@ -4,11 +4,11 @@ import { Rnd } from 'react-rnd';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { showToast } from '../mobile/Toast';
 
-// Configure pdf.js worker - Use npm package worker instead of CDN
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString();
+// Configure pdf.js worker - Use unpkg CDN with correct MIME type
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+// API Base URL - Production fallback
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://usar-ics212.pdarleyjr.workers.dev';
 
 // PDF Constants - Letter size 8.5" x 11" @ 72 DPI
 const PDF_WIDTH = 612;
@@ -60,8 +60,7 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
   const fetchFieldConfigs = async () => {
     try {
       setLoading(true);
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
-      const response = await fetch(`${apiBaseUrl}/api/admin/pdf-config/${formType}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdf-config/${formType}`, {
         headers: {
           'X-Admin-Password': apiPassword,
         },
@@ -148,9 +147,8 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
   const handleSave = async () => {
     try {
       setSaving(true);
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
       
-      const response = await fetch(`${apiBaseUrl}/api/admin/pdf-config/${formType}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdf-config/${formType}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -185,8 +183,7 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
     }
 
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
-      const response = await fetch(`${apiBaseUrl}/api/admin/pdf-config/${formType}/reset`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdf-config/${formType}/reset`, {
         method: 'DELETE',
         headers: {
           'X-Admin-Password': apiPassword,
