@@ -29,13 +29,29 @@ interface PdfMapperProps {
   apiPassword: string;
 }
 
-export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) {
+export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }: PdfMapperProps) {
+  const [formType, setFormType] = useState(initialFormType);
   const [fields, setFields] = useState<FieldConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+
+  // Available form types
+  const FORM_TYPES = [
+    { value: 'ics212', label: 'ICS-212 - Vehicle Inspection' },
+    { value: 'ics218', label: 'ICS-218 - Support Resource Manifest' },
+  ];
+
+  // Get template path based on form type
+  const getTemplatePath = (type: string) => {
+    const templates: Record<string, string> = {
+      ics212: '/templates/ics_212_template.pdf',
+      ics218: '/templates/ics_218_template.pdf',
+    };
+    return templates[type] || templates.ics212;
+  };
 
   // Fetch existing field configurations
   useEffect(() => {
@@ -225,7 +241,7 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
               PDF Field Mapper
@@ -261,6 +277,25 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
             </button>
           </div>
         </div>
+
+        {/* Form Type Selector */}
+        <div className="flex items-center gap-4">
+          <label htmlFor="formType" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Select Form Template:
+          </label>
+          <select
+            id="formType"
+            value={formType}
+            onChange={(e) => setFormType(e.target.value)}
+            className="flex-1 max-w-md px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            {FORM_TYPES.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Instructions */}
@@ -289,21 +324,21 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
           {/* PDF Template - Placeholder since template is in R2 */}
           <div className="absolute inset-0 flex items-center justify-center">
             <Document
-              file="/templates/ics_212_template.pdf"
+              file={getTemplatePath(formType)}
               loading={
                 <div className="text-gray-500">Loading PDF template...</div>
               }
-              error={
+              error={() => (
                 <div className="text-center p-8 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                   <AlertCircle className="mx-auto mb-2 text-yellow-600" size={32} />
                   <p className="text-yellow-900 dark:text-yellow-100">
                     PDF template not found. Upload template to R2 bucket first.
                   </p>
                   <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
-                    Expected location: R2 'usar-forms' bucket, key 'templates/ics_212_template.pdf'
+                    Expected location: R2 'usar-forms' bucket, key '{getTemplatePath(formType)}'
                   </p>
                 </div>
-              }
+              )}
             >
               <Page
                 pageNumber={1}
