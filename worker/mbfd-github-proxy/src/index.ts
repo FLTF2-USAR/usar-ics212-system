@@ -142,8 +142,11 @@ const CACHE_TTL = {
  * Helper to get CORS headers with proper origin
  */
 function getCorsHeaders(origin: string | null): Record<string, string> {
-  // Check if origin is allowed
-  const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))
+  // Check if origin is allowed (including wildcard for .pages.dev deployments)
+  const allowedOrigin = origin && (
+    ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed)) ||
+    origin.match(/^https:\/\/[a-z0-9]+\.usar-ics212\.pages\.dev$/)
+  )
     ? origin
     : ALLOWED_ORIGINS[0]; // Default to first allowed origin
 
@@ -192,7 +195,10 @@ export default {
     }
 
     // Origin check for security (allow requests only from our apps)
-    if (origin && !ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) {
+    if (origin && !(
+      ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed)) ||
+      origin.match(/^https:\/\/[a-z0-9]+\.usar-ics212\.pages\.dev$/)
+    )) {
       console.error('Forbidden: Invalid origin', origin);
       return jsonResponse(
         { error: 'Forbidden', message: 'Access denied from this origin' },
@@ -486,24 +492,24 @@ export default {
 
     // NEW: PDF Field Configuration endpoints (admin only)
     // GET /api/admin/pdf-config/:formType - Fetch configurations
-    const pdfConfigGetMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)$/);
+    const pdfConfigGetMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)$/)
     if (pdfConfigGetMatch && request.method === 'GET') {
-      const formType = decodeURIComponent(pdfConfigGetMatch[1]);
-      return await handleGetPDFConfig(request, env, corsHeaders, formType);
+      const formType = decodeURIComponent(pdfConfigGetMatch[1])
+      return await handleGetPDFConfig(request, env, corsHeaders, formType)
     }
 
     // POST /api/admin/pdf-config/:formType - Update configurations
-    const pdfConfigPostMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)$/);
+    const pdfConfigPostMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)$/)
     if (pdfConfigPostMatch && request.method === 'POST') {
-      const formType = decodeURIComponent(pdfConfigPostMatch[1]);
-      return await handleUpdatePDFConfig(request, env, corsHeaders, formType);
+      const formType = decodeURIComponent(pdfConfigPostMatch[1])
+      return await handleUpdatePDFConfig(request, env, corsHeaders, formType)
     }
 
     // DELETE /api/admin/pdf-config/:formType/reset - Reset to defaults
-    const pdfConfigResetMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)\/reset$/);
+    const pdfConfigResetMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)\/reset$/)
     if (pdfConfigResetMatch && request.method === 'DELETE') {
-      const formType = decodeURIComponent(pdfConfigResetMatch[1]);
-      return await handleResetPDFConfig(request, env, corsHeaders, formType);
+      const formType = decodeURIComponent(pdfConfigResetMatch[1])
+      return await handleResetPDFConfig(request, env, corsHeaders, formType)
     }
 
     // Route to appropriate handler
@@ -534,7 +540,7 @@ async function handleIssuesRequest(
   env: Env,
   url: URL
 ): Promise<Response> {
-  const path = url.pathname.replace('/api/issues', '');
+  const path = url.pathname.replace('/api/issues', '')
   
   try {
     // List issues - with caching for GET requests
