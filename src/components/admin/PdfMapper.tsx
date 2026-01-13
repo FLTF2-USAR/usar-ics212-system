@@ -46,11 +46,8 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
 
   // Get template path based on form type
   const getTemplatePath = (type: string) => {
-    const templates: Record<string, string> = {
-      ics212: '/templates/ics_212_template.pdf',
-      ics218: '/templates/ics_218_template.pdf',
-    };
-    return templates[type] || templates.ics212;
+    // Use the API URL that proxies R2 storage
+    return `${API_BASE_URL}/api/admin/pdf-template/${type}`;
   };
 
   // Fetch existing field configurations

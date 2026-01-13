@@ -495,6 +495,60 @@ export default {
       return await handleAirtable(request, env, corsHeaders);
     }
 
+    // NEW: PDF Template Proxy - Serve templates from R2 storage
+    const pdfTemplateMatch = path.match(/^\/api\/admin\/pdf-template\/([^\/]+)$/)
+    if (pdfTemplateMatch && request.method === 'GET') {
+      const formType = decodeURIComponent(pdfTemplateMatch[1])
+      
+      // Map form types to R2 keys
+      const templateMap: Record<string, string> = {
+        'ics212': 'templates/ics_212_template.pdf',
+        'ics218': 'templates/ics_218_template.pdf',
+      };
+
+      const key = templateMap[formType];
+      if (!key) {
+        return jsonResponse({ error: 'Invalid form type' }, { status: 400, headers: corsHeaders });
+      }
+
+      // Check if R2 is configured
+      if (!env.USAR_FORMS) {
+        return jsonResponse(
+          { error: 'R2 storage not configured' }, 
+          { status: 500, headers: corsHeaders }
+        );
+      }
+
+      try {
+        // Fetch from R2
+        const object = await env.USAR_FORMS.get(key);
+        
+        if (!object) {
+          return jsonResponse(
+            { error: 'Template not found in R2', key }, 
+            { status: 404, headers: corsHeaders }
+          );
+        }
+
+        // Return as PDF stream with correct headers
+        return new Response(object.body, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/pdf',
+            'Cache-Control': 'public, max-age=3600',
+            'Content-Disposition': `inline; filename="${formType}_template.pdf"`,
+          },
+        });
+      } catch (error) {
+        console.error('Error fetching template from R2:', error);
+        return jsonResponse(
+          { error: 'Failed to fetch template from storage' }, 
+          { status: 500, headers: corsHeaders }
+        );
+      }
+    }
+
     // NEW: PDF Field Configuration endpoints (admin only)
     // GET /api/admin/pdf-config/:formType - Fetch configurations
     const pdfConfigGetMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)$/)
