@@ -4,8 +4,11 @@ import { Rnd } from 'react-rnd';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { showToast } from '../mobile/Toast';
 
-// Configure pdf.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Configure pdf.js worker - Use npm package worker instead of CDN
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 // PDF Constants - Letter size 8.5" x 11" @ 72 DPI
 const PDF_WIDTH = 612;
@@ -57,7 +60,8 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
   const fetchFieldConfigs = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/pdf-config/${formType}`, {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
+      const response = await fetch(`${apiBaseUrl}/api/admin/pdf-config/${formType}`, {
         headers: {
           'X-Admin-Password': apiPassword,
         },
@@ -144,8 +148,9 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
   const handleSave = async () => {
     try {
       setSaving(true);
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
       
-      const response = await fetch(`/api/admin/pdf-config/${formType}`, {
+      const response = await fetch(`${apiBaseUrl}/api/admin/pdf-config/${formType}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +185,8 @@ export function PdfMapper({ formType = 'ics212', apiPassword }: PdfMapperProps) 
     }
 
     try {
-      const response = await fetch(`/api/admin/pdf-config/${formType}/reset`, {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
+      const response = await fetch(`${apiBaseUrl}/api/admin/pdf-config/${formType}/reset`, {
         method: 'DELETE',
         headers: {
           'X-Admin-Password': apiPassword,
