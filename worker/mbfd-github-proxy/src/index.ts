@@ -166,18 +166,18 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const origin = request.headers.get('Origin');
     
-    // Handle CORS preflight
+    // CORS headers for all responses - MUST BE FIRST
+    const corsHeaders = getCorsHeaders(origin);
+    
+    // Handle CORS preflight - MUST BYPASS ALL AUTH
     if (request.method === 'OPTIONS') {
       return new Response(null, {
-        headers: getCorsHeaders(origin),
+        headers: corsHeaders,
       });
     }
 
     const url = new URL(request.url);
     const path = url.pathname;
-
-    // CORS headers for all responses
-    const corsHeaders = getCorsHeaders(origin);
 
     // Health check endpoint (always accessible)
     if (path === '/health') {
@@ -199,7 +199,7 @@ export default {
     }
 
     // Origin check for security (allow requests only from our apps)
-    if (origin && !(
+    if (origin && !( 
       origin.includes('localhost') || 
       origin.endsWith('.github.io') || 
       origin.endsWith('.pages.dev')
@@ -219,16 +219,16 @@ export default {
           error: 'Server configuration error', 
           message: 'GitHub token not configured. Please set GITHUB_TOKEN in Cloudflare Worker settings.' 
         },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
-
-    // Check if admin password is configured only when needed
-    // Rest of password checking is in the isAdminEndpoint block below
 
     // Check if this is an admin-only endpoint
     const labelsParam = url.searchParams.get('labels') || '';
     const hasApparatusFilter = labelsParam.includes('Rescue') || labelsParam.includes('Engine');
+    
+    // PDF template and config endpoints require authentication
+    const isPDFEndpoint = path.startsWith('/api/admin/pdf-');
     
     // Allow receipts creation and log issue closing for regular users
     // Only these operations require admin: bulk queries without filters, resolving defects
@@ -237,7 +237,7 @@ export default {
                             (path.startsWith('/api/issues/') && request.method === 'PATCH' && !path.match(/^\/api\/issues\/\d+$/)) ||
                             (path === '/api/issues' && request.method === 'GET' && !hasApparatusFilter);
     
-    if (isAdminEndpoint) {
+    if (isAdminEndpoint || isPDFEndpoint) {
       // Check if admin password is configured
       if (!env.ADMIN_PASSWORD) {
         console.error('ADMIN_PASSWORD environment variable is not set');
@@ -246,7 +246,7 @@ export default {
             error: 'Server configuration error', 
             message: 'Admin password not configured. Please set ADMIN_PASSWORD in Cloudflare Worker settings.' 
           },
-          { status: 500 }
+          { status: 500, headers: corsHeaders }
         );
       }
 
@@ -256,7 +256,7 @@ export default {
         console.warn('Unauthorized admin access attempt');
         return jsonResponse(
           { error: 'Unauthorized. Invalid admin password.' },
-          { status: 401 }
+          { status: 401, headers: corsHeaders }
         );
       }
     }
