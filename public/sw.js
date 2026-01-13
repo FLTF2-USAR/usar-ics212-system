@@ -1,99 +1,50 @@
-const CACHE_NAME = 'usar-ics212-v3-coordinates-fix';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/offline.html',
-  '/#/ics212',
-  '/data/rescue_checklist.json',
-  '/data/engine_checklist.json',
-  '/data/ladder1_checklist.json',
-  '/data/ladder3_checklist.json',
-  '/data/rope_checklist.json'
-];
+// ⚠️ SELF-DESTRUCTING SERVICE WORKER ⚠️
+// Version: KILL_SWITCH_v1
+// Purpose: Break zombie cache loop by forcing unregistration and hard reload
 
-self.addEventListener('install', (event) => {
-  console.log('[SW] Install event - caching app shell and all checklists');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Caching:', urlsToCache.length, 'resources');
-        return cache.addAll(urlsToCache);
-      })
-      .then(() => self.skipWaiting()) // Activate immediately
+console.log('🔥 [SW KILL_SWITCH_v1] Self-destruct worker loaded');
+
+self.addEventListener('install', function(e) {
+  console.log('🔥 [SW KILL_SWITCH_v1] Installing - forcing immediate activation');
+  self.skipWaiting(); // Force activation immediately without waiting
+});
+
+self.addEventListener('activate', function(e) {
+  console.log('🔥 [SW KILL_SWITCH_v1] Activated - executing self-destruct sequence');
+  
+  e.waitUntil(
+    // Step 1: Clear ALL caches
+    caches.keys().then(function(cacheNames) {
+      console.log('🗑️ [SW KILL_SWITCH_v1] Deleting', cacheNames.length, 'caches');
+      return Promise.all(
+        cacheNames.map(function(cacheName) {
+          console.log('🗑️ [SW KILL_SWITCH_v1] Deleting cache:', cacheName);
+          return caches.delete(cacheName);
+        })
+      );
+    }).then(function() {
+      // Step 2: Unregister this worker
+      console.log('💣 [SW KILL_SWITCH_v1] Unregistering self');
+      return self.registration.unregister();
+    }).then(function() {
+      // Step 3: Get all open tabs/windows
+      return self.clients.matchAll({ type: 'window' });
+    }).then(function(clients) {
+      // Step 4: Force hard reload on all tabs (bypasses cache)
+      console.log('🔄 [SW KILL_SWITCH_v1] Forcing hard reload on', clients.length, 'clients');
+      clients.forEach(function(client) {
+        console.log('🔄 [SW KILL_SWITCH_v1] Reloading client:', client.url);
+        client.navigate(client.url);
+      });
+    }).catch(function(error) {
+      console.error('❌ [SW KILL_SWITCH_v1] Error during self-destruct:', error);
+    })
   );
 });
 
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  
-  // NETWORK-ONLY for API calls - NEVER cache these
-  if (url.pathname.includes('/api/') || url.hostname.includes('workers.dev')) {
-    event.respondWith(
-      fetch(event.request).catch(err => {
-        console.error('[SW] API request failed:', err);
-        return new Response(JSON.stringify({ error: 'Network error', message: err.message }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' }
-        });
-       })
-    );
-    return;
-  }
-  
-  // Network-first for HTML navigation requests (fixes blank page bug)
-  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          // Clone response BEFORE using it
-          if (response && response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, responseClone);
-            }).catch(err => {
-              console.warn('[SW] Could not cache response:', err.message);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Offline: serve from cache first, then offline page as fallback
-          return caches.match(event.request)
-            .then(response => {
-              return response || caches.match('/offline.html');
-            });
-        })
-    );
-    return;
-  }
-  
-  // Network-first for ALL checklist JSON files (always get latest when online)
-  if (url.pathname.includes('_checklist.json')) {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          // Clone response BEFORE using it
-          if (response && response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, responseClone);
-            }).catch(err => {
-              console.warn('[SW] Could not cache checklist:', err.message);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Offline: serve cached version
-          return caches.match(event.request);
-        })
-    );
-    return;
-  }
-  
-  // Cache-first for other resources (JS, CSS, images)
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => response || fetch(event.request))
-  );
+// Block ALL fetch requests - force network
+self.addEventListener('fetch', function(e) {
+  console.log('🚫 [SW KILL_SWITCH_v1] Blocking cached response, forcing network for:', e.request.url);
+  // Do NOT respond with cache - let request go to network
+  return;
 });
