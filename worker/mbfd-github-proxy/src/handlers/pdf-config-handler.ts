@@ -50,7 +50,7 @@ export async function handleGetPDFConfig(
       JSON.stringify({
         success: true,
         formType,
-        fields: result.results || [],
+        configs: result.results || [],
         count: result.results?.length || 0
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
