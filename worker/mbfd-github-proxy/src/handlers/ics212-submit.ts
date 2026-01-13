@@ -145,6 +145,7 @@ export async function handleICS212Submit(
         } as any,
         includeSignatures: true,
         r2Bucket: env.USAR_FORMS,
+        db: db,  // Pass D1 database for dynamic field coordinates
       });
 
       console.log(`PDF generated: ${(pdfResult.size / 1024).toFixed(2)} KB`);

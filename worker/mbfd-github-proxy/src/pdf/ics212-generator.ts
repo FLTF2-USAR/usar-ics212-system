@@ -1,9 +1,8 @@
 /**
  * ICS-212 WF Vehicle Safety Inspection Form - PDF Generation Module
  * 
- * NEW APPROACH: Loads official ICS-212 template PDF from R2 and overlays user data at precise coordinates
- * Similar to JotForm's PDF form filling - ensures pixel-perfect alignment
- * 
+ * DYNAMIC APPROACH: Loads field coordinates from D1 database (pdf_field_configs table)
+ * Falls back to hardcoded coordinates if database is unavailable
  * Template Location: R2 bucket 'usar-forms', key 'templates/ics_212_template.pdf'
  */
 
@@ -43,6 +42,37 @@ interface R2Bucket {
 
 interface R2ObjectBody {
   arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+/**
+ * D1 Database Interface
+ */
+interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+}
+
+interface D1PreparedStatement {
+  bind(...values: any[]): D1PreparedStatement;
+  all(): Promise<D1Result>;
+}
+
+interface D1Result {
+  results: any[];
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Field Configuration from D1
+ */
+interface FieldConfig {
+  field_key: string;
+  x_pct: number;
+  y_pct: number;
+  width_pct: number;
+  height_pct: number;
+  field_type?: string;
+  font_size?: number;
 }
 
 /**
@@ -92,28 +122,8 @@ function drawCoordinateGrid(page: any, width: number, height: number): void {
 }
 
 /**
- * PDF Coordinate Mapping - Precise positions aligned to official form template
- * Y-coordinates are measured from BOTTOM of page (PDF standard), X from LEFT
- * To move DOWN: DECREASE Y value
- * To move UP: INCREASE Y value
- * To move RIGHT: INCREASE X value
- * To move LEFT: DECREASE X value
- * 
- * ITERATION 9: EXACT GRID-LINE COORDINATES FROM USER TESTING
- * User verified each field against grid overlay and provided exact coordinates:
- * - Vehicle Type: X=650, Y=100
- * - Odometer: X=650, Y=350
- * - Vehicle ID: X=650, Y=500
- * - Reg/Unit: X=675, Y=500 (between 650-700 on grid)
- * - First checkbox (Pass): X=600, Y=250-300 range
- * - Inspector Date: X=175, Y=100
- * - Inspector Time: X=175, Y=250
- * - Operator Date: X=175, Y=350
- * - Operator Time: X=175, Y=500
- * - Inspector Name: X=145, Y=200
- * - Operator Name: X=145, Y=450
- * - Inspector Signature: X=125, Y=200
- * - Operator Signature: X=125, Y=450
+ * FALLBACK: Hardcoded coordinates (used if D1 is unavailable)
+ * These are the original grid-verified coordinates
  */
 const FIELD_COORDS = {
   // Header section - Perfect (no changes)
@@ -178,6 +188,83 @@ const FIELD_COORDS = {
 };
 
 /**
+ * Fetch dynamic field configurations from D1 database
+ */
+async function fetchFieldConfigs(db: D1Database, formType: string = 'ics212'): Promise<Map<string, FieldConfig>> {
+  try {
+    console.log(`Fetching field configs from D1 for form type: ${formType}`);
+    
+    const result = await db
+      .prepare('SELECT * FROM pdf_field_configs WHERE form_type = ?')
+      .bind(formType)
+      .all();
+
+    if (!result.success || !result.results || result.results.length === 0) {
+      console.warn('No field configs found in D1, using fallback coordinates');
+      return new Map();
+    }
+
+    const configMap = new Map<string, FieldConfig>();
+    for (const row of result.results) {
+      configMap.set(row.field_key, {
+        field_key: row.field_key,
+        x_pct: row.x_pct,
+        y_pct: row.y_pct,
+        width_pct: row.width_pct,
+        height_pct: row.height_pct,
+        field_type: row.field_type,
+        font_size: row.font_size,
+      });
+    }
+
+    console.log(`Loaded ${configMap.size} field configs from D1`);
+    return configMap;
+  } catch (error) {
+    console.error('Error fetching field configs from D1:', error);
+    return new Map();
+  }
+}
+
+/**
+ * Convert percentage-based coordinates to PDF points
+ * Handles the Y-axis flip (web coords are top-down, PDF coords are bottom-up)
+ */
+function percentToPdfCoords(
+  x_pct: number,
+  y_pct: number,
+  width_pct: number = 0,
+  height_pct: number = 0
+): { x: number; y: number; width: number; height: number } {
+  const x = x_pct * PAGE_SIZE.width;
+  const width = width_pct * PAGE_SIZE.width;
+  const height = height_pct * PAGE_SIZE.height;
+  
+  // Y-axis flip: PDF origin is bottom-left, web origin is top-left
+  // Formula: pdf_y = PAGE_HEIGHT - (y_pct * PAGE_HEIGHT) - height
+  const y = PAGE_SIZE.height - (y_pct * PAGE_SIZE.height) - height;
+  
+  return { x, y, width, height };
+}
+
+/**
+ * Get field coordinates - tries D1 first, falls back to hardcoded
+ */
+function getFieldCoords(
+  fieldKey: string,
+  configMap: Map<string, FieldConfig>,
+  fallback: any
+): { x: number; y: number } {
+  const config = configMap.get(fieldKey);
+  if (config) {
+    const coords = percentToPdfCoords(config.x_pct, config.y_pct, config.width_pct, config.height_pct);
+    return { x: coords.x, y: coords.y };
+  }
+  
+  // Fallback to hardcoded coordinates
+  return fallback || { x: 0, y: 0 };
+}
+
+/**
  * PDF Generation Options
  */
 export interface PDFGenerationOptions {
@@ -185,6 +272,7 @@ export interface PDFGenerationOptions {
   includeSignatures: boolean;
   watermark?: string;
   r2Bucket: R2Bucket;  // R2 bucket for fetching template
+  db: D1Database;      // D1 database for fetching field configs
 }
 
 /**
@@ -208,6 +296,10 @@ export async function generateICS212PDF(
   try {
     console.log('Fetching ICS-212 template from R2...');
     
+    // Fetch dynamic field configurations from D1
+    const fieldConfigMap = await fetchFieldConfigs(options.db, 'ics212');
+    console.log(`Using ${fieldConfigMap.size > 0 ? 'dynamic' : 'fallback'} field coordinates`);
+    
     // Fetch template PDF from R2
     const templateObject = await options.r2Bucket.get('templates/ics_212_template.pdf');
     if (!templateObject) {
@@ -229,8 +321,8 @@ export async function generateICS212PDF(
     const normalFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    // Overlay user data onto template
-    await overlayFormData(page, normalFont, boldFont, options.formData, pdfDoc);
+    // Overlay user data onto template with dynamic coordinates
+    await overlayFormData(page, normalFont, boldFont, options.formData, pdfDoc, fieldConfigMap);
     
     // Save modified PDF
     const pdfBytes = await pdfDoc.save();
@@ -291,20 +383,21 @@ async function overlayFormData(
   normalFont: any,
   boldFont: any,
   formData: ICS212FormData,
-  pdfDoc: any
+  pdfDoc: any,
+  fieldConfigMap: Map<string, FieldConfig>
 ): Promise<void> {
   // Draw coordinate grid first (if enabled)
   const { width, height } = page.getSize();
   drawCoordinateGrid(page, width, height);
   
-  // Top section fields
-  overlayTextField(page, normalFont, FIELD_COORDS.incidentName, formData.incidentName);
-  overlayTextField(page, normalFont, FIELD_COORDS.orderNo, formData.orderNo);
-  overlayTextField(page, normalFont, FIELD_COORDS.vehicleLicenseNo, formData.vehicleLicenseNo);
+  // Top section fields - use dynamic coords or fallback
+  overlayTextField(page, normalFont, getFieldCoords('incidentName', fieldConfigMap, FIELD_COORDS.incidentName), formData.incidentName);
+  overlayTextField(page, normalFont, getFieldCoords('orderNo', fieldConfigMap, FIELD_COORDS.orderNo), formData.orderNo);
+  overlayTextField(page, normalFont, getFieldCoords('vehicleLicenseNo', fieldConfigMap, FIELD_COORDS.vehicleLicenseNo), formData.vehicleLicenseNo);
 
   // Split agency/reg unit
   const agencyParts = formData.agencyRegUnit?.split('/') || ['', ''];
-  overlayTextField(page, normalFont, FIELD_COORDS.agency, agencyParts[0]);
+  overlayTextField(page, normalFont, getFieldCoords('agency', fieldConfigMap, FIELD_COORDS.agency), agencyParts[0]);
 
   // Initialize the try...catch block with 'undefined' for 'agencyParts[1]'
   let regUnitText: string | undefined = 'undefined';
@@ -313,23 +406,23 @@ async function overlayFormData(
   } catch (e) {
     console.log(`Error getting agencyParts[1]: ${e}`);
   }
-  overlayTextField(page, normalFont, FIELD_COORDS.regUnit, regUnitText);
+  overlayTextField(page, normalFont, getFieldCoords('regUnit', fieldConfigMap, FIELD_COORDS.regUnit), regUnitText);
 
   
-  overlayTextField(page, normalFont, FIELD_COORDS.vehicleType, formData.vehicleType);
+  overlayTextField(page, normalFont, getFieldCoords('vehicleType', fieldConfigMap, FIELD_COORDS.vehicleType), formData.vehicleType);
   
   // Odometer & Vehicle ID - Use smaller font (8pt instead of 10pt)
-  overlayTextFieldSmall(page, normalFont, FIELD_COORDS.odometerReading, formData.odometerReading?.toString());
-  overlayTextFieldSmall(page, normalFont, FIELD_COORDS.vehicleIdNo, formData.vehicleIdNo);
+  overlayTextFieldSmall(page, normalFont, getFieldCoords('odometerReading', fieldConfigMap, FIELD_COORDS.odometerReading), formData.odometerReading?.toString());
+  overlayTextFieldSmall(page, normalFont, getFieldCoords('vehicleIdNo', fieldConfigMap, FIELD_COORDS.vehicleIdNo), formData.vehicleIdNo);
   
-  // Inspection items - checkboxes and comments
-  overlayInspectionItems(page, normalFont, boldFont, formData.inspectionItems);
+  // Inspection items - checkboxes and comments with dynamic coords
+  overlayInspectionItems(page, normalFont, boldFont, formData.inspectionItems, fieldConfigMap);
   
   // Additional comments
-  overlayComments(page, normalFont, formData.additionalComments);
+  overlayComments(page, normalFont, formData.additionalComments, fieldConfigMap);
   
-  // Bottom decision boxes
-  await overlayDecisionBoxes(page, normalFont, boldFont, formData, pdfDoc);
+  // Bottom decision boxes with dynamic coords
+  await overlayDecisionBoxes(page, normalFont, boldFont, formData, pdfDoc, fieldConfigMap);
 }
 
 /**
@@ -383,21 +476,40 @@ function overlayInspectionItems(
   page: any,
   normalFont: any,
   boldFont: any,
-  items: InspectionItem[]
+  items: InspectionItem[],
+  fieldConfigMap: Map<string, FieldConfig>
 ): void {
   for (let i = 0; i < Math.min(items.length, 17); i++) {
     const item = items[i];
-    const coords = FIELD_COORDS.inspectionItems[i];
     
-    if (!item || !coords) continue;
+    // Get dynamic coordinates or fallback
+    const passConfig = fieldConfigMap.get(`inspection_${i}_pass`);
+    const failConfig = fieldConfigMap.get(`inspection_${i}_fail`);
+    const commentConfig = fieldConfigMap.get(`inspection_${i}_comment`);
+    
+    const fallbackCoords = FIELD_COORDS.inspectionItems[i] || { passX: 600, failX: 395, commentX: 445, y: 275 - (i * 17) };
+    
+    const passCoords = passConfig
+      ? percentToPdfCoords(passConfig.x_pct, passConfig.y_pct, passConfig.width_pct, passConfig.height_pct)
+      : { x: fallbackCoords.passX, y: fallbackCoords.y, width: 0, height: 0 };
+    
+    const failCoords = failConfig
+      ? percentToPdfCoords(failConfig.x_pct, failConfig.y_pct, failConfig.width_pct, failConfig.height_pct)
+      : { x: fallbackCoords.failX, y: fallbackCoords.y, width: 0, height: 0 };
+    
+    const commentCoords = commentConfig
+      ? percentToPdfCoords(commentConfig.x_pct, commentConfig.y_pct, commentConfig.width_pct, commentConfig.height_pct)
+      : { x: fallbackCoords.commentX, y: fallbackCoords.y, width: 0, height: 0 };
+    
+    if (!item) continue;
     
     // Draw Pass checkbox 'X'
     if (item.status === 'pass') {
-      drawDebugBox(page, coords.passX, coords.y, 10, 10);
+      drawDebugBox(page, passCoords.x, passCoords.y, 10, 10);
       
       page.drawText('X', {
-        x: coords.passX,
-        y: coords.y,
+        x: passCoords.x,
+        y: passCoords.y,
         size: FONTS.checkbox,
         font: boldFont,
         color: COLORS.black,
@@ -406,11 +518,11 @@ function overlayInspectionItems(
     
     // Draw Fail checkbox 'X'
     if (item.status === 'fail') {
-      drawDebugBox(page, coords.failX, coords.y, 10, 10);
+      drawDebugBox(page, failCoords.x, failCoords.y, 10, 10);
       
       page.drawText('X', {
-        x: coords.failX,
-        y: coords.y,
+        x: failCoords.x,
+        y: failCoords.y,
         size: FONTS.checkbox,
         font: boldFont,
         color: COLORS.black,
@@ -421,8 +533,8 @@ function overlayInspectionItems(
     if (item.comments) {
       const commentText = item.comments.substring(0, 20); // Limit length to fit
       page.drawText(commentText, {
-        x: coords.commentX,
-        y: coords.y,
+        x: commentCoords.x,
+        y: commentCoords.y,
         size: FONTS.small,
         font: normalFont,
         color: COLORS.black,
@@ -437,13 +549,20 @@ function overlayInspectionItems(
 function overlayComments(
   page: any,
   font: any,
-  comments: string | undefined
+  comments: string | undefined,
+  fieldConfigMap: Map<string, FieldConfig>
 ): void {
   if (!comments) return;
   
-  const coords = FIELD_COORDS.additionalComments;
+  // Get dynamic coordinates or fallback
+  const config = fieldConfigMap.get('additionalComments');
+  const coords = config
+    ? percentToPdfCoords(config.x_pct, config.y_pct, config.width_pct, config.height_pct)
+    : FIELD_COORDS.additionalComments;
+  
   const lines = comments.split('\n');
   let y = coords.y;
+  const lineHeight = ('lineHeight' in coords ? coords.lineHeight : 12) || 12;
   
   for (const line of lines.slice(0, 5)) {  // Max 5 lines
     if (line.trim()) {
@@ -455,7 +574,7 @@ function overlayComments(
         color: COLORS.black,
       });
     }
-    y -= coords.lineHeight;
+    y -= lineHeight;
   }
 }
 
@@ -467,13 +586,34 @@ async function overlayDecisionBoxes(
   normalFont: any,
   boldFont: any,
   formData: ICS212FormData,
-  pdfDoc: any
+  pdfDoc: any,
+  fieldConfigMap: Map<string, FieldConfig>
 ): Promise<void> {
+  // Get dynamic coordinates or fallback for HOLD FOR REPAIRS
+  const holdCheckboxCoords = getFieldCoords('hold_checkbox', fieldConfigMap, FIELD_COORDS.holdForRepairs.checkbox);
+  const inspectorDateCoords = getFieldCoords('inspector_date', fieldConfigMap, FIELD_COORDS.holdForRepairs.date);
+  const inspectorTimeCoords = getFieldCoords('inspector_time', fieldConfigMap, FIELD_COORDS.holdForRepairs.time);
+  const inspectorNameCoords = getFieldCoords('inspector_name', fieldConfigMap, FIELD_COORDS.holdForRepairs.inspectorName);
+  const inspectorSigConfig = fieldConfigMap.get('inspector_signature');
+  const inspectorSigCoords = inspectorSigConfig
+    ? percentToPdfCoords(inspectorSigConfig.x_pct, inspectorSigConfig.y_pct, inspectorSigConfig.width_pct, inspectorSigConfig.height_pct)
+    : FIELD_COORDS.holdForRepairs.inspectorSignature;
+  
+  // Get dynamic coordinates or fallback for RELEASE
+  const releaseCheckboxCoords = getFieldCoords('release_checkbox', fieldConfigMap, FIELD_COORDS.releaseForUse.checkbox);
+  const operatorDateCoords = getFieldCoords('operator_date', fieldConfigMap, FIELD_COORDS.releaseForUse.date);
+  const operatorTimeCoords = getFieldCoords('operator_time', fieldConfigMap, FIELD_COORDS.releaseForUse.time);
+  const operatorNameCoords = getFieldCoords('operator_name', fieldConfigMap, FIELD_COORDS.releaseForUse.operatorName);
+  const operatorSigConfig = fieldConfigMap.get('operator_signature');
+  const operatorSigCoords = operatorSigConfig
+    ? percentToPdfCoords(operatorSigConfig.x_pct, operatorSigConfig.y_pct, operatorSigConfig.width_pct, operatorSigConfig.height_pct)
+    : FIELD_COORDS.releaseForUse.operatorSignature;
+  
   // HOLD FOR REPAIRS checkbox
   if (formData.releaseStatus === 'hold') {
     page.drawText('X', {
-      x: FIELD_COORDS.holdForRepairs.checkbox.x,
-      y: FIELD_COORDS.holdForRepairs.checkbox.y,
+      x: holdCheckboxCoords.x,
+      y: holdCheckboxCoords.y,
       size: FONTS.data,
       font: boldFont,
       color: COLORS.black,
@@ -483,8 +623,8 @@ async function overlayDecisionBoxes(
   // HOLD FOR REPAIRS - Date, Time, Name
   if (formData.inspectorDate) {
     page.drawText(new Date(formData.inspectorDate).toLocaleDateString(), {
-      x: FIELD_COORDS.holdForRepairs.date.x,
-      y: FIELD_COORDS.holdForRepairs.date.y,
+      x: inspectorDateCoords.x,
+      y: inspectorDateCoords.y,
       size: FONTS.small,
       font: normalFont,
       color: COLORS.black,
@@ -493,8 +633,8 @@ async function overlayDecisionBoxes(
   
   if (formData.inspectorTime) {
     page.drawText(formData.inspectorTime, {
-      x: FIELD_COORDS.holdForRepairs.time.x,
-      y: FIELD_COORDS.holdForRepairs.time.y,
+      x: inspectorTimeCoords.x,
+      y: inspectorTimeCoords.y,
       size: FONTS.small,
       font: normalFont,
       color: COLORS.black,
@@ -503,8 +643,8 @@ async function overlayDecisionBoxes(
   
   if (formData.inspectorNamePrint) {
     page.drawText(formData.inspectorNamePrint, {
-      x: FIELD_COORDS.holdForRepairs.inspectorName.x,
-      y: FIELD_COORDS.holdForRepairs.inspectorName.y,
+      x: inspectorNameCoords.x,
+      y: inspectorNameCoords.y,
       size: FONTS.small,
       font: normalFont,
       color: COLORS.black,
@@ -517,15 +657,15 @@ async function overlayDecisionBoxes(
       page,
       pdfDoc,
       formData.inspectorSignature,
-      FIELD_COORDS.holdForRepairs.inspectorSignature
+      inspectorSigCoords
     );
   }
   
   // RELEASE checkbox
   if (formData.releaseStatus === 'release') {
     page.drawText('X', {
-      x: FIELD_COORDS.releaseForUse.checkbox.x,
-      y: FIELD_COORDS.releaseForUse.checkbox.y,
+      x: releaseCheckboxCoords.x,
+      y: releaseCheckboxCoords.y,
       size: FONTS.data,
       font: boldFont,
       color: COLORS.black,
@@ -535,8 +675,8 @@ async function overlayDecisionBoxes(
   // RELEASE - Date, Time, Name
   if (formData.operatorDate) {
     page.drawText(new Date(formData.operatorDate).toLocaleDateString(), {
-      x: FIELD_COORDS.releaseForUse.date.x,
-      y: FIELD_COORDS.releaseForUse.date.y,
+      x: operatorDateCoords.x,
+      y: operatorDateCoords.y,
       size: FONTS.small,
       font: normalFont,
       color: COLORS.black,
@@ -545,8 +685,8 @@ async function overlayDecisionBoxes(
   
   if (formData.operatorTime) {
     page.drawText(formData.operatorTime, {
-      x: FIELD_COORDS.releaseForUse.time.x,
-      y: FIELD_COORDS.releaseForUse.time.y,
+      x: operatorTimeCoords.x,
+      y: operatorTimeCoords.y,
       size: FONTS.small,
       font: normalFont,
       color: COLORS.black,
@@ -555,8 +695,8 @@ async function overlayDecisionBoxes(
   
   if (formData.operatorNamePrint) {
     page.drawText(formData.operatorNamePrint, {
-      x: FIELD_COORDS.releaseForUse.operatorName.x,
-      y: FIELD_COORDS.releaseForUse.operatorName.y,
+      x: operatorNameCoords.x,
+      y: operatorNameCoords.y,
       size: FONTS.small,
       font: normalFont,
       color: COLORS.black,
@@ -569,7 +709,7 @@ async function overlayDecisionBoxes(
       page,
       pdfDoc,
       formData.operatorSignature,
-      FIELD_COORDS.releaseForUse.operatorSignature
+      operatorSigCoords
     );
   }
 }

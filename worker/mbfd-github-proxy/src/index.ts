@@ -64,6 +64,8 @@ import { handleFiles } from './handlers/files-handler';
 import { handleEmail } from './handlers/email-handler';
 import { handleAnalytics } from './handlers/analytics-handler';
 import { handleAirtable } from './handlers/airtable-handler';
+// NEW: PDF Config handler for Visual Mapper
+import { handleGetPDFConfig, handleUpdatePDFConfig, handleResetPDFConfig } from './handlers/pdf-config-handler';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -480,6 +482,28 @@ export default {
     // Airtable deployment endpoints
     if (path.startsWith('/api/airtable/deployments') || path.startsWith('/api/airtable/deployment-stats')) {
       return await handleAirtable(request, env, corsHeaders);
+    }
+
+    // NEW: PDF Field Configuration endpoints (admin only)
+    // GET /api/admin/pdf-config/:formType - Fetch configurations
+    const pdfConfigGetMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)$/);
+    if (pdfConfigGetMatch && request.method === 'GET') {
+      const formType = decodeURIComponent(pdfConfigGetMatch[1]);
+      return await handleGetPDFConfig(request, env, corsHeaders, formType);
+    }
+
+    // POST /api/admin/pdf-config/:formType - Update configurations
+    const pdfConfigPostMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)$/);
+    if (pdfConfigPostMatch && request.method === 'POST') {
+      const formType = decodeURIComponent(pdfConfigPostMatch[1]);
+      return await handleUpdatePDFConfig(request, env, corsHeaders, formType);
+    }
+
+    // DELETE /api/admin/pdf-config/:formType/reset - Reset to defaults
+    const pdfConfigResetMatch = path.match(/^\/api\/admin\/pdf-config\/([^\/]+)\/reset$/);
+    if (pdfConfigResetMatch && request.method === 'DELETE') {
+      const formType = decodeURIComponent(pdfConfigResetMatch[1]);
+      return await handleResetPDFConfig(request, env, corsHeaders, formType);
     }
 
     // Route to appropriate handler

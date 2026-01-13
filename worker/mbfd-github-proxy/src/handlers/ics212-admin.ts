@@ -806,6 +806,7 @@ async function handleRegeneratePDF(
       formData: formData as any,
       includeSignatures: true,
       r2Bucket: env.USAR_FORMS,
+      db: db,  // Pass D1 database for dynamic field coordinates
     });
 
     console.log(`PDF regenerated: ${(pdfResult.size / 1024).toFixed(2)} KB`);
@@ -933,7 +934,7 @@ async function handleBatchDownload(
           const zipFilename = `${form.form_id}_ICS212.pdf`;
           zip.file(zipFilename, pdfResult.buffer);
           successCount++;
-          console.log(`[BATCH DOWNLOAD] Added ${zipFilename} (${(pdfResult.buffer.byteLength / 1024).toFixed(2)} KB)`);
+          console.log(`[BATCH DOWNLOAD] Added ${zipFilename} ((${pdfResult.buffer.byteLength / 1024}).toFixed(2)} KB)`);
         } else {
           console.warn(`[BATCH DOWNLOAD] PDF not found for: ${form.form_id}`, pdfResult.error);
           failureCount++;
