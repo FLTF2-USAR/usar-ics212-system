@@ -18,6 +18,7 @@ const ICS218AdminDashboard = lazy(() => import('./components/admin/ICS218AdminDa
 const DocumentManagement = lazy(() => import('./components/admin/DocumentManagement').then(m => ({ default: m.DocumentManagement })));
 const FormDetail = lazy(() => import('./components/admin/FormDetail').then(m => ({ default: m.FormDetail })));
 const ICS218Detail = lazy(() => import('./components/admin/ICS218Detail').then(m => ({ default: m.ICS218Detail })));
+const PdfMapper = lazy(() => import('./components/admin/PdfMapper').then(m => ({ default: m.PdfMapper })));
 
 // Wrapper components to extract URL params
 function FormDetailWrapper() {
@@ -115,6 +116,14 @@ function App() {
               element={
                 <AdminAuth>
                   <DocumentManagement />
+                </AdminAuth>
+              } 
+            />
+            <Route 
+              path="/admin/pdf-config" 
+              element={
+                <AdminAuth>
+                  <PdfMapper formType="ics212" apiPassword="" />
                 </AdminAuth>
               } 
             />

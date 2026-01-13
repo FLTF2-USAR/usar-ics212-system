@@ -23,7 +23,8 @@ import {
   Home,
   ChevronRight,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Settings
 } from 'lucide-react';
 
 interface SystemStats {
@@ -145,6 +146,20 @@ export function AdminHub() {
       ],
     },
     {
+      id: 'pdf-config',
+      title: 'PDF Configuration',
+      subtitle: 'Visual Field Mapper',
+      icon: Settings,
+      gradient: 'from-purple-500 to-pink-500',
+      bgGradient: 'from-purple-500/10 to-pink-500/10',
+      path: '/admin/pdf-config',
+      stats: [
+        { label: 'Form Types', value: 1, icon: ChevronRight },
+        { label: 'Configurable Fields', value: 93, icon: Settings },
+        { label: 'Status', value: 'Active', icon: CheckCircle },
+      ],
+    },
+    {
       id: 'documents',
       title: 'Document Management',
       subtitle: 'Upload & Organize Forms',
@@ -207,7 +222,7 @@ export function AdminHub() {
         </div>
 
         {/* Management Cards Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-8">
           {cards.map((card) => (
             <TouchFeedback key={card.id}>
               <div
