@@ -1,4 +1,4 @@
-# Visual PDF Mapper - Implementation Complete ✅
+# Visual PDF Field Mapper - Implementation Complete ✅
 
 **Date**: January 13, 2026  
 **Feature Branch**: `feature/visual-pdf-mapper` (merged to `main`)  
@@ -74,31 +74,69 @@ Successfully implemented a JotForm-style Visual PDF Field Mapper for the USAR IC
 
 ---
 
-## 🚀 **Deployment Status**
+## 🚀 Deployment
 
-### **Worker**: ✅ DEPLOYED
-- **URL**: https://usar-ics212.pdarleyjr.workers.dev
-- **Version**: 4b896d51-a6d7-4022-ad9d-a01a1c5bc773
-- **Bindings**: D1, R2, KV, AI all active
+### Local Deployment
 
-### **Pages**: ✅ DEPLOYED
-- **URL**: https://fd07c818.usar-ics212.pages.dev
-- **Alias**: https://feature-visual-pdf-mapper.usar-ics212.pages.dev
-- **Build**: Successful (6.20s)
-- **Bundle**: 1.59 MB total
+✅ **Worker**: Deployed to Cloudflare Workers
+- URL: https://usar-ics212.pdarleyjr.workers.dev
+- D1 Database: `usar-forms-db` (70 field configs seeded)
+- Authentication: ADMIN_PASSWORD secret configured
 
-### **Database**: ✅ MIGRATED
-- **D1 Database**: `usar-ics212-db`
-- **Migration**: `0006_create_pdf_field_configs.sql`
-- **Records**: 70 field configurations
-- **Status**: Applied to local and remote
+✅ **Pages**: Deployed to Cloudflare Pages
+- URL: https://usar-ics212.pages.dev
+- Latest Deployment: https://eb381683.usar-ics212.pages.dev
+- Environment: Production build with `.env.production`
 
-### **Secrets**: ✅ CONFIGURED
-- **ADMIN_PASSWORD**: Set via Wrangler
+### Production Fixes (2026-01-13)
 
----
+#### Issue 1: PDF.js Worker CORS Error
+**Problem**: CDN-hosted worker blocked due to MIME type mismatch
+**Error**: `Loading module from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/..." was blocked because of a disallowed MIME type ("text/html")`
 
-## 📊 **Technical Architecture**
+**Solution**: Changed to bundled npm package worker
+```typescript
+// Before (BROKEN)
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+// After (FIXED)
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
+```
+
+#### Issue 2: API Calls Using Localhost in Production
+**Problem**: Frontend calling `http://localhost:8787` instead of production worker
+**Error**: `Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at http://localhost:8787/ics212/analytics`
+
+**Solution**: 
+1. Created `.env.production` with `VITE_API_BASE_URL=https://usar-ics212.pdarleyjr.workers.dev`
+2. Updated all API calls to use environment variable:
+```typescript
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
+const response = await fetch(`${apiBaseUrl}/api/admin/pdf-config/${formType}`, {
+  headers: { 'X-Admin-Password': apiPassword }
+});
+```
+
+#### Issue 3: Stale Cache
+**Problem**: Service worker caching old deployment
+**Solution**: Hard refresh (Ctrl+Shift+R) or clear application cache
+
+### Verification Checklist
+
+After deployment, verify:
+- [ ] PDF Configuration card appears in Admin Hub (4th card)
+- [ ] Analytics loads without CORS errors
+- [ ] PDF mapper page accessible at `/admin/pdf-config`
+- [ ] PDF.js worker loads without errors
+- [ ] API calls use production worker URL
+- [ ] All 70 fields appear in mapper
+- [ ] Drag/resize/save functionality works
+- [ ] Browser console shows no network errors
+
+## 📦 Jon,**Dependencies**
 
 ### **Percentage-Based Storage**
 - Coordinates stored as 0.0-1.0 floats
