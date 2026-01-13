@@ -35,6 +35,7 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedField, setSelectedField] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
 
@@ -62,10 +63,33 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
     }
   }, []);
 
-  // Fetch existing field configurations
+  // FIRST: Verify authentication before any API calls
   useEffect(() => {
+    const password = apiPassword || localStorage.getItem('adminPassword') || sessionStorage.getItem('adminPassword');
+    
+    if (!password || password.trim() === '') {
+      console.error('❌ [PDF Mapper] No admin password found. Redirecting to login.');
+      showToast({
+        message: 'Admin authentication required. Please log in.',
+        type: 'error',
+      });
+      // Redirect to admin page
+      window.location.href = '/admin';
+      return;
+    }
+    
+    console.log('✅ [PDF Mapper] Admin password verified. Length:', password.length);
+    setAuthChecked(true);
+  }, [apiPassword]);
+
+  // Fetch existing field configurations (ONLY AFTER AUTH CHECK)
+  useEffect(() => {
+    if (!authChecked) {
+      console.log('⏳ [PDF Mapper] Waiting for auth check before loading configs...');
+      return;
+    }
     fetchFieldConfigs();
-  }, [formType]);
+  }, [formType, authChecked]);
 
   // Update container dimensions on mount and resize
   useEffect(() => {
@@ -85,17 +109,26 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
   const fetchFieldConfigs = async () => {
     try {
       setLoading(true);
+      console.log('📤 [fetchFieldConfigs] Sending request to:', `${API_BASE_URL}/api/admin/pdf-config/${formType}`);
+      console.log('📤 [fetchFieldConfigs] Password present:', !!apiPassword, 'Length:', apiPassword?.length || 0);
+      
       const response = await fetch(`${API_BASE_URL}/api/admin/pdf-config/${formType}`, {
         headers: {
           'X-Admin-Password': apiPassword,
         },
       });
 
+      console.log('📥 [fetchFieldConfigs] Response status:', response.status);
+      console.log('📥 [fetchFieldConfigs] Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error('Failed to fetch field configurations');
+        const errorText = await response.text();
+        console.error('❌ [fetchFieldConfigs] Error response:', errorText);
+        throw new Error(`Failed to fetch field configurations: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('✅ [fetchFieldConfigs] Success - Received configs:', data.configs?.length || 0);
       
       // Convert to FieldConfig format with labels
       const configsWithLabels = data.configs.map((config: any) => ({
@@ -105,7 +138,7 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
 
       setFields(configsWithLabels);
     } catch (error) {
-      console.error('Error fetching field configs:', error);
+      console.error('❌ [fetchFieldConfigs] Error:', error);
       showToast({
         message: 'Failed to load field configurations',
         type: 'error',
@@ -172,6 +205,8 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
   const handleSave = async () => {
     try {
       setSaving(true);
+      console.log('📤 [handleSave] Sending request to:', `${API_BASE_URL}/api/admin/pdf-config/${formType}`);
+      console.log('📤 [handleSave] Password present:', !!apiPassword, 'Configs:', fields.length);
       
       const response = await fetch(`${API_BASE_URL}/api/admin/pdf-config/${formType}`, {
         method: 'POST',
@@ -182,16 +217,21 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
         body: JSON.stringify({ configs: fields }),
       });
 
+      console.log('📥 [handleSave] Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to save field configurations');
+        const errorText = await response.text();
+        console.error('❌ [handleSave] Error response:', errorText);
+        throw new Error(`Failed to save field configurations: ${response.status}`);
       }
 
+      console.log('✅ [handleSave] Success');
       showToast({
         message: 'Field configurations saved successfully!',
         type: 'success',
       });
     } catch (error) {
-      console.error('Error saving field configs:', error);
+      console.error('❌ [handleSave] Error:', error);
       showToast({
         message: 'Failed to save field configurations',
         type: 'error',
@@ -208,6 +248,9 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
     }
 
     try {
+      console.log('📤 [handleReset] Sending DELETE request to:', `${API_BASE_URL}/api/admin/pdf-config/${formType}/reset`);
+      console.log('📤 [handleReset] Password present:', !!apiPassword);
+      
       const response = await fetch(`${API_BASE_URL}/api/admin/pdf-config/${formType}/reset`, {
         method: 'DELETE',
         headers: {
@@ -215,10 +258,15 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
         },
       });
 
+      console.log('📥 [handleReset] Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to reset field configurations');
+        const errorText = await response.text();
+        console.error('❌ [handleReset] Error response:', errorText);
+        throw new Error(`Failed to reset field configurations: ${response.status}`);
       }
 
+      console.log('✅ [handleReset] Success');
       showToast({
         message: 'Field configurations reset to defaults',
         type: 'success',
@@ -227,7 +275,7 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
       // Reload configurations
       await fetchFieldConfigs();
     } catch (error) {
-      console.error('Error resetting field configs:', error);
+      console.error('❌ [handleReset] Error:', error);
       showToast({
         message: 'Failed to reset field configurations',
         type: 'error',
