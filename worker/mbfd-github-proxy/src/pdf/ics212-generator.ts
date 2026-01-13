@@ -99,11 +99,21 @@ function drawCoordinateGrid(page: any, width: number, height: number): void {
  * To move RIGHT: INCREASE X value
  * To move LEFT: DECREASE X value
  * 
- * ITERATION 8: ABSOLUTE GRID-VERIFIED COORDINATES
- * All values set to EXACT positions based on grid overlay analysis
- * Footer: Y=65-135 (was floating at Y=168-237)
- * Header: Y=630-635 (avoiding Y=650 line collision)
- * Checkboxes: Start Y=615, Pass X=255 (centered in column)
+ * ITERATION 9: EXACT GRID-LINE COORDINATES FROM USER TESTING
+ * User verified each field against grid overlay and provided exact coordinates:
+ * - Vehicle Type: X=650, Y=100
+ * - Odometer: X=650, Y=350
+ * - Vehicle ID: X=650, Y=500
+ * - Reg/Unit: X=675, Y=500 (between 650-700 on grid)
+ * - First checkbox (Pass): X=600, Y=250-300 range
+ * - Inspector Date: X=175, Y=100
+ * - Inspector Time: X=175, Y=250
+ * - Operator Date: X=175, Y=350
+ * - Operator Time: X=175, Y=500
+ * - Inspector Name: X=145, Y=200
+ * - Operator Name: X=145, Y=450
+ * - Inspector Signature: X=125, Y=200
+ * - Operator Signature: X=125, Y=450
  */
 const FIELD_COORDS = {
   // Header section - Perfect (no changes)
@@ -112,53 +122,58 @@ const FIELD_COORDS = {
   
   // Top section - Row 2 (below "Vehicle License No." and "Agency Reg/Unit" labels)
   vehicleLicenseNo: { x: 60, y: 674 },
-  agency: { x: 285, y: 674 },
-  regUnit: { x: 455, y: 674 },
+  agency: { x: 285, y: 674 },  // Keep this field
   
-  // ITERATION 8: Header fields - EXACT ABSOLUTE coordinates below Y=650 line
-  vehicleType: { x: 60, y: 652 },
-  odometerReading: { x: 335, y: 635 },  // ABSOLUTE: Clear of Y=650 line
-  vehicleIdNo: { x: 485, y: 630 },      // ABSOLUTE: X=485 clears label, Y=630 below line
+  // ITERATION 9: Reg/Unit - EXACT grid coordinate
+  regUnit: { x: 675, y: 500 },  // Between 650-700 on grid, Y=500 from bottom
   
-  // ITERATION 8: Checkboxes - EXACT ABSOLUTE coordinates, Pass centered at X=255
+  // ITERATION 9: Vehicle Type - EXACT grid coordinate  
+  vehicleType: { x: 650, y: 100 },  // X=650 line from left, Y=100 from bottom
+  
+  // ITERATION 9: Odometer & Vehicle ID - EXACT grid coordinates
+  odometerReading: { x: 650, y: 350 },  // X=650 line, Y=350 from bottom
+  vehicleIdNo: { x: 650, y: 500 },      // X=650 line, Y=500 from bottom
+  
+  // ITERATION 9: Checkboxes - First checkbox at EXACT grid intersection
+  // User spec: "FIRST X...EXACTLY AT THE 600 LINE FROM THE LEFT AND BETWEEN THE 250 AND 300 LINE FROM THE BOTTOM"
   inspectionItems: [
-    { passX: 255, failX: 395, commentX: 445, y: 615 },  // ABSOLUTE START
-    { passX: 255, failX: 395, commentX: 445, y: 598 },  // 615 - 17 = 598
-    { passX: 255, failX: 395, commentX: 445, y: 581 },  // 598 - 17 = 581
-    { passX: 255, failX: 395, commentX: 445, y: 564 },  // 581 - 17 = 564
-    { passX: 255, failX: 395, commentX: 445, y: 547 },  // 564 - 17 = 547
-    { passX: 255, failX: 395, commentX: 445, y: 530 },  // 547 - 17 = 530
-    { passX: 255, failX: 395, commentX: 445, y: 513 },  // 530 - 17 = 513
-    { passX: 255, failX: 395, commentX: 445, y: 496 },  // 513 - 17 = 496
-    { passX: 255, failX: 395, commentX: 445, y: 479 },  // 496 - 17 = 479
-    { passX: 255, failX: 395, commentX: 445, y: 462 },  // 479 - 17 = 462
-    { passX: 255, failX: 395, commentX: 445, y: 445 },  // 462 - 17 = 445
-    { passX: 255, failX: 395, commentX: 445, y: 428 },  // 445 - 17 = 428
-    { passX: 255, failX: 395, commentX: 445, y: 411 },  // 428 - 17 = 411
-    { passX: 255, failX: 395, commentX: 445, y: 394 },  // 411 - 17 = 394
-    { passX: 255, failX: 395, commentX: 445, y: 377 },  // 394 - 17 = 377
-    { passX: 255, failX: 395, commentX: 445, y: 360 },  // 377 - 17 = 360
-    { passX: 255, failX: 395, commentX: 445, y: 343 },  // 360 - 17 = 343
+    { passX: 600, failX: 395, commentX: 445, y: 275 },  // First: X=600, Y=275 (midpoint 250-300)
+    { passX: 600, failX: 395, commentX: 445, y: 258 },
+    { passX: 600, failX: 395, commentX: 445, y: 241 },
+    { passX: 600, failX: 395, commentX: 445, y: 224 },
+    { passX: 600, failX: 395, commentX: 445, y: 207 },
+    { passX: 600, failX: 395, commentX: 445, y: 190 },
+    { passX: 600, failX: 395, commentX: 445, y: 173 },
+    { passX: 600, failX: 395, commentX: 445, y: 156 },
+    { passX: 600, failX: 395, commentX: 445, y: 139 },
+    { passX: 600, failX: 395, commentX: 445, y: 122 },
+    { passX: 600, failX: 395, commentX: 445, y: 105 },
+    { passX: 600, failX: 395, commentX: 445, y: 88 },
+    { passX: 600, failX: 395, commentX: 445, y: 71 },
+    { passX: 600, failX: 395, commentX: 445, y: 54 },
+    { passX: 600, failX: 395, commentX: 445, y: 37 },
+    { passX: 600, failX: 395, commentX: 445, y: 20 },
+    { passX: 600, failX: 395, commentX: 445, y: 3 },
   ],
 
   // Additional Comments section (starts below "Additional Comments:" label)
   additionalComments: { x: 60, y: 328, maxWidth: 500, lineHeight: 12 },
 
-  // ITERATION 8: Footer - EXACT ABSOLUTE coordinates in Y=65-135 zone (signature block area)
+  // ITERATION 9: Footer - EXACT grid coordinates from user testing
   holdForRepairs: {
-    checkbox: { x: 60, y: 135 },     // ABSOLUTE: Top of signature block
-    date: { x: 45, y: 115 },         // ABSOLUTE: Date line
-    time: { x: 120, y: 115 },        // ABSOLUTE: Time line (same as date)
-    inspectorName: { x: 95, y: 95 }, // ABSOLUTE: Name line
-    inspectorSignature: { x: 95, y: 65, width: 150, height: 25 },  // ABSOLUTE: Signature box
+    checkbox: { x: 60, y: 135 },        // Keep existing checkbox position
+    date: { x: 175, y: 100 },           // X=175 line, Y=100 from bottom
+    time: { x: 175, y: 250 },           // X=175 line, Y=250 from bottom
+    inspectorName: { x: 145, y: 200 },  // X=145 line, Y=200 from bottom
+    inspectorSignature: { x: 125, y: 200, width: 150, height: 25 },  // X=125, Y=200
   },
 
   releaseForUse: {
-    checkbox: { x: 305, y: 135 },    // ABSOLUTE: Top of signature block
-    date: { x: 290, y: 115 },        // ABSOLUTE: Date line
-    time: { x: 365, y: 115 },        // ABSOLUTE: Time line (same as date)
-    operatorName: { x: 340, y: 95 }, // ABSOLUTE: Name line
-    operatorSignature: { x: 340, y: 65, width: 150, height: 25 },  // ABSOLUTE: Signature box
+    checkbox: { x: 305, y: 135 },       // Keep existing checkbox position
+    date: { x: 175, y: 350 },           // X=175 line, Y=350 from bottom
+    time: { x: 175, y: 500 },           // X=175 line, Y=500 from bottom
+    operatorName: { x: 145, y: 450 },   // X=145 line, Y=450 from bottom
+    operatorSignature: { x: 125, y: 450, width: 150, height: 25 },  // X=125, Y=450
   },
 };
 
@@ -286,11 +301,20 @@ async function overlayFormData(
   overlayTextField(page, normalFont, FIELD_COORDS.incidentName, formData.incidentName);
   overlayTextField(page, normalFont, FIELD_COORDS.orderNo, formData.orderNo);
   overlayTextField(page, normalFont, FIELD_COORDS.vehicleLicenseNo, formData.vehicleLicenseNo);
-  
+
   // Split agency/reg unit
   const agencyParts = formData.agencyRegUnit?.split('/') || ['', ''];
   overlayTextField(page, normalFont, FIELD_COORDS.agency, agencyParts[0]);
-  overlayTextField(page, normalFont, FIELD_COORDS.regUnit, agencyParts[1]);
+
+  // Initialize the try...catch block with 'undefined' for 'agencyParts[1]'
+  let regUnitText: string | undefined = 'undefined';
+  try {
+    regUnitText = agencyParts[1];
+  } catch (e) {
+    console.log(`Error getting agencyParts[1]: ${e}`);
+  }
+  overlayTextField(page, normalFont, FIELD_COORDS.regUnit, regUnitText);
+
   
   overlayTextField(page, normalFont, FIELD_COORDS.vehicleType, formData.vehicleType);
   
