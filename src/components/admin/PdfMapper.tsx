@@ -50,6 +50,18 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
     return `${API_BASE_URL}/api/admin/pdf-template/${type}`;
   };
 
+  // CRITICAL: Unregister service workers to clear stale cache
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          console.log('[PDF Mapper] Unregistering stale service worker:', registration);
+          registration.unregister();
+        }
+      });
+    }
+  }, []);
+
   // Fetch existing field configurations
   useEffect(() => {
     fetchFieldConfigs();
@@ -322,8 +334,8 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
           <div className="absolute inset-0 flex items-center justify-center">
             <Document
               file={getTemplatePath(formType)}
-              loading={
-                <div className="text-gray-500">Loading PDF template...</div>
+              loading={ 
+                <div className="text-gray-500">Loading PDF template...</div> 
               }
               error={() => (
                 <div className="text-center p-8 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
@@ -363,7 +375,7 @@ export function PdfMapper({ formType: initialFormType = 'ics212', apiPassword }:
                   handleResizeStop(field.field_key, ref, position)
                 }
                 bounds="parent"
-                className={`border-2 ${
+                className={`border-2 ${ 
                   selectedField === field.field_key
                     ? 'border-blue-500 bg-blue-500/20'
                     : 'border-red-500 bg-red-500/10'

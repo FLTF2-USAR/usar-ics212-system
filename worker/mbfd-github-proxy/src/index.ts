@@ -227,17 +227,19 @@ export default {
     const labelsParam = url.searchParams.get('labels') || '';
     const hasApparatusFilter = labelsParam.includes('Rescue') || labelsParam.includes('Engine');
     
-    // PDF template and config endpoints require authentication
-    const isPDFEndpoint = path.startsWith('/api/admin/pdf-');
+    // PDF template endpoint is PUBLIC (blank government form - no sensitive data)
+    // PDF config endpoints require authentication (saves field positions)
+    const isPublicPDFTemplate = path.startsWith('/api/admin/pdf-template/');
+    const isProtectedPDFConfig = path.startsWith('/api/admin/pdf-config/');
     
     // Allow receipts creation and log issue closing for regular users
     // Only these operations require admin: bulk queries without filters, resolving defects
-    const isAdminEndpoint = path.includes('/admin/') || 
+    const isAdminEndpoint = (path.includes('/admin/') && !isPublicPDFTemplate) || 
                             path.includes('/resolve') || 
                             (path.startsWith('/api/issues/') && request.method === 'PATCH' && !path.match(/^\/api\/issues\/\d+$/)) ||
                             (path === '/api/issues' && request.method === 'GET' && !hasApparatusFilter);
     
-    if (isAdminEndpoint || isPDFEndpoint) {
+    if (isAdminEndpoint || isProtectedPDFConfig) {
       // Check if admin password is configured
       if (!env.ADMIN_PASSWORD) {
         console.error('ADMIN_PASSWORD environment variable is not set');
